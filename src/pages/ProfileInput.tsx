@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import type { UserProfile, ActivityLevel, Gender } from '../models/types';
+import type { UserProfile } from '../models/types';
 import { NutritionCalculator } from '../services/NutritionCalculator';
 
 const ProfileInput: React.FC = () => {
