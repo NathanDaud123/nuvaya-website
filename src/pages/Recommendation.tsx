@@ -258,12 +258,9 @@ const Recommendation: React.FC = () => {
         )}
       </div>
 
-      <div style={{ textAlign: 'center', marginTop: '1.5rem', display: 'flex', gap: '0.75rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+      <div style={{ textAlign: 'center', marginTop: '1.5rem' }}>
         <button onClick={regenerate} className="btn-primary">
           Generate Ulang Menu
-        </button>
-        <button onClick={() => navigate('/targets')} className="btn-outline">
-          Atur Target Mingguan
         </button>
       </div>
     </div>
