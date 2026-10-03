@@ -1,9 +1,30 @@
 import React, { useEffect, useState } from 'react';
-import Papa from 'papaparse';
 import type { FoodLibrary, RecommendedMenu } from '../services/GeneticAlgorithm';
 import { GeneticAlgorithm } from '../services/GeneticAlgorithm';
-import type { FoodItem, NutritionalNeeds } from '../models/types';
+import { CATEGORY_ORDER, loadFoodLibrary, STANDARD_PORTION_GRAMS } from '../services/FoodDatabase';
+import type { FoodContext, MochiCalculationResult, NutritionalNeeds } from '../models/types';
+import { StatList, StatRow } from '../components/StatList';
+import { STORAGE_KEYS, loadStored } from '../services/storage';
 import { useNavigate } from 'react-router-dom';
+
+/**
+ * R34/R35: alergi tidak pernah ditampilkan; makanan yang tidak disukai diganti.
+ * Kategori yang habis terkecualikan dipakai utuh (fallback) agar GA tetap jalan.
+ */
+function applyFoodContext(library: FoodLibrary, ctx: FoodContext | null): { filtered: FoodLibrary; excludedCount: number } {
+  if (!ctx) return { filtered: library, excludedCount: 0 };
+  const excluded = new Set([...ctx.allergyFoodKeys, ...ctx.dislikedFoodKeys]);
+  if (excluded.size === 0) return { filtered: library, excludedCount: 0 };
+
+  const filtered = {} as FoodLibrary;
+  let excludedCount = 0;
+  (Object.keys(library) as (keyof FoodLibrary)[]).forEach((cat) => {
+    const kept = library[cat].filter((item) => !excluded.has(`${cat}:${item.menu}`));
+    excludedCount += library[cat].length - kept.length;
+    filtered[cat] = kept.length > 0 ? kept : library[cat];
+  });
+  return { filtered, excludedCount };
+}
 
 const Recommendation: React.FC = () => {
   const navigate = useNavigate();
@@ -12,81 +33,104 @@ const Recommendation: React.FC = () => {
   const [menu, setMenu] = useState<RecommendedMenu | null>(null);
   const [totals, setTotals] = useState<NutritionalNeeds | null>(null);
   const [totalPrice, setTotalPrice] = useState(0);
+  const [excludedCount, setExcludedCount] = useState(0);
+
+  const fmtNum = (n: number) =>
+    n.toLocaleString('id-ID', { maximumFractionDigits: 1 });
+  const fmtKcal = (n: number) => Math.round(n).toLocaleString('id-ID');
+
+  const [library, setLibrary] = useState<FoodLibrary | null>(null);
+
+  const applyTotals = (m: RecommendedMenu) => {
+    const allItems = [...m.breakfast, ...m.lunch, ...m.dinner];
+    setTotals({
+      calories: Math.round(allItems.reduce((a, i) => a + i.energy, 0)),
+      protein: Math.round(allItems.reduce((a, i) => a + i.protein, 0)),
+      carbs: Math.round(allItems.reduce((a, i) => a + i.carbo, 0)),
+      fat: Math.round(allItems.reduce((a, i) => a + i.fat, 0)),
+      fiber: 0,
+    });
+    setTotalPrice(allItems.reduce((a, i) => a + i.price, 0));
+  };
+
+  /** Ganti satu item dengan alternatif se-kategori (di luar alergi/hindari). */
+  const substitute = (mealKey: keyof RecommendedMenu, idx: number) => {
+    if (!menu || !library) return;
+    const cat = CATEGORY_ORDER[idx];
+    if (!cat) return;
+    const current = menu[mealKey][idx];
+    const candidates = library[cat].filter((i) => i.menu !== current.menu);
+    if (candidates.length === 0) return;
+    const pick = candidates[Math.floor(Math.random() * candidates.length)];
+    const next: RecommendedMenu = {
+      ...menu,
+      [mealKey]: menu[mealKey].map((it, i) => (i === idx ? pick : it)),
+    };
+    setMenu(next);
+    applyTotals(next);
+  };
 
   useEffect(() => {
-    const savedNeeds = localStorage.getItem('nuvaya_needs');
-    if (!savedNeeds) {
+    const savedMochi = loadStored(STORAGE_KEYS.result);
+    const savedNeeds = loadStored(STORAGE_KEYS.needs);
+    if (!savedMochi && !savedNeeds) {
       navigate('/profile');
       return;
     }
-    
-    const parsedNeeds = JSON.parse(savedNeeds) as NutritionalNeeds;
-    setNeeds(parsedNeeds);
+    // Preferensi kini menyatu di Profil Ibu; fallback ke profil bila belum ada
+    const savedFood = loadStored(STORAGE_KEYS.food);
+    if (!savedFood) {
+      navigate('/profile');
+      return;
+    }
+    const foodCtx = JSON.parse(savedFood) as FoodContext;
 
-    loadDatasetsAndRunGA(parsedNeeds);
+    const run = async () => {
+      try {
+        const library = await loadFoodLibrary();
+        const { filtered, excludedCount: n } = applyFoodContext(library, foodCtx);
+        setLibrary(filtered);
+        setExcludedCount(n);
+
+        let target: NutritionalNeeds;
+        if (savedMochi) {
+          const parsed = JSON.parse(savedMochi) as MochiCalculationResult;
+          target = parsed.gaTarget;
+        } else {
+          target = JSON.parse(savedNeeds as string) as NutritionalNeeds;
+        }
+        setNeeds(target);
+
+        const recommended = GeneticAlgorithm.run(filtered, target);
+        if (recommended) {
+          setMenu(recommended);
+          applyTotals(recommended);
+        }
+      } catch (error) {
+        console.error('Error loading datasets', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    run();
   }, [navigate]);
 
-  const loadDatasetsAndRunGA = async (targetNeeds: NutritionalNeeds) => {
+  const regenerate = async () => {
+    if (!needs) return;
+    setLoading(true);
     try {
-      const loadCsv = (filename: string): Promise<FoodItem[]> => {
-        return new Promise((resolve) => {
-          Papa.parse(`/datasets/${filename}.csv`, {
-            download: true,
-            header: true,
-            dynamicTyping: true,
-            complete: (results) => {
-              const items = results.data
-                .filter((row: any) => row.menu) // remove empty rows
-                .map((row: any) => ({
-                  no: row.no,
-                  menu: row.menu,
-                  energy: row.energy || 0,
-                  carbo: row.carbo || 0,
-                  protein: row.protein || 0,
-                  fat: row.fat || 0,
-                  price: row.price || 0
-                }));
-              resolve(items as FoodItem[]);
-            }
-          });
-        });
-      };
-
-      const [staple, plant, animal, vegetable, side] = await Promise.all([
-        loadCsv('rec_source_staple'),
-        loadCsv('rec_source_plant'),
-        loadCsv('rec_source_animal'),
-        loadCsv('rec_source_vegetable'),
-        loadCsv('rec_source_side')
-      ]);
-
-      const library: FoodLibrary = {
-        mp: staple,
-        sn: plant,
-        sh: animal,
-        sy: vegetable,
-        plk: side
-      };
-
-      // Run GA
-      const recommended = GeneticAlgorithm.run(library, targetNeeds);
+      const library = await loadFoodLibrary();
+      const savedFood = loadStored(STORAGE_KEYS.food);
+      const { filtered } = applyFoodContext(library, savedFood ? (JSON.parse(savedFood) as FoodContext) : null);
+      setLibrary(filtered);
+      const recommended = GeneticAlgorithm.run(filtered, needs);
       if (recommended) {
         setMenu(recommended);
-        
-        // calculate totals
-        const allItems = [...recommended.breakfast, ...recommended.lunch, ...recommended.dinner];
-        const cal = allItems.reduce((acc, item) => acc + item.energy, 0);
-        const pro = allItems.reduce((acc, item) => acc + item.protein, 0);
-        const carb = allItems.reduce((acc, item) => acc + item.carbo, 0);
-        const fat = allItems.reduce((acc, item) => acc + item.fat, 0);
-        const price = allItems.reduce((acc, item) => acc + item.price, 0);
-        
-        setTotals({ calories: Math.round(cal), protein: Math.round(pro), carbs: Math.round(carb), fat: Math.round(fat), fiber: 0 });
-        setTotalPrice(price);
+        applyTotals(recommended);
       }
-      setLoading(false);
     } catch (error) {
-      console.error("Error loading datasets", error);
+      console.error('Error regenerating menu', error);
+    } finally {
       setLoading(false);
     }
   };
@@ -96,63 +140,130 @@ const Recommendation: React.FC = () => {
   }
 
   return (
-    <div className="container" style={{ padding: '4rem 1rem' }}>
+    <div className="container reco-page">
       <div className="section-header">
         <h2>Rekomendasi Menu Anda</h2>
-        <p>Menu ini disusun menggunakan AI Canggih untuk mendekati target gizi harian Anda.</p>
+        <p>Menu ini disusun untuk mendekati target gizi harian Anda.</p>
+        {excludedCount > 0 && (
+          <p style={{ fontSize: '0.9rem', color: 'var(--text-light)' }}>
+            {excludedCount} makanan dikecualikan sesuai alergi / makanan yang Anda hindari.
+          </p>
+        )}
       </div>
 
-      {needs && totals && (
-        <div className="focus-row" style={{ marginBottom: '3rem' }}>
-          <div className="focus-item bordered-panel">
-            <h3>Target Harian Anda</h3>
-            <ul className="clean-list" style={{ marginTop: '0.75rem' }}>
-              <li><strong>Kalori:</strong> {needs.calories} kcal</li>
-              <li><strong>Protein:</strong> {needs.protein} g</li>
-              <li><strong>Karbohidrat:</strong> {needs.carbs} g</li>
-              <li><strong>Lemak:</strong> {needs.fat} g</li>
-            </ul>
-          </div>
-          <div className="focus-item highlight-panel" style={{ padding: '1.25rem' }}>
-            <h3>Total Menu Rekomendasi</h3>
-            <ul className="clean-list" style={{ marginTop: '0.75rem' }}>
-              <li><strong>Kalori:</strong> {totals.calories} kcal</li>
-              <li><strong>Protein:</strong> {totals.protein} g</li>
-              <li><strong>Karbohidrat:</strong> {totals.carbs} g</li>
-              <li><strong>Lemak:</strong> {totals.fat} g</li>
-              <li style={{ marginTop: '0.5rem', paddingTop: '0.5rem', borderTop: '1px solid var(--border)' }}>
-                <strong>Estimasi Harga:</strong> Rp {totalPrice.toLocaleString('id-ID')}
-              </li>
-            </ul>
-          </div>
-        </div>
-      )}
+      <div className="reco-grid">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          {totals && (
+            <div className="focus-item highlight-panel">
+              <h3>Total Menu Rekomendasi</h3>
+              <StatList labelWidth="8rem">
+                <StatRow label="Kalori">{totals.calories} kcal</StatRow>
+                <StatRow label="Protein">{totals.protein} g</StatRow>
+                <StatRow label="Karbohidrat">{totals.carbs} g</StatRow>
+                <StatRow label="Lemak">{totals.fat} g</StatRow>
+                <StatRow label="Estimasi Harga">Rp {totalPrice.toLocaleString('id-ID')}</StatRow>
+              </StatList>
+            </div>
+          )}
 
-      {menu && (
-        <div className="menu-grid">
-          {Object.entries(menu).map(([time, items]) => (
-            <div key={time} className="focus-item bordered-panel menu-card">
-              <h3 style={{ textTransform: 'capitalize', color: 'var(--primary)' }}>
-                {time === 'breakfast' ? 'Sarapan' : time === 'lunch' ? 'Makan Siang' : 'Makan Malam'}
-              </h3>
-              <div style={{ marginTop: '1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                {items.map((item, idx) => (
-                  <div key={idx} className="menu-item">
-                    <strong>{item.menu}</strong>
-                    <div style={{ fontSize: '0.8rem', color: 'var(--text-light)', marginTop: '0.1rem' }}>
-                      {item.energy} kcal • P:{item.protein}g • K:{item.carbo}g • L:{item.fat}g
+          {needs && totals && (
+            <div className="focus-item bordered-panel">
+              <h3>Capaian Target Harian</h3>
+              {(
+                [
+                  { label: 'Kalori', total: totals.calories, target: needs.calories, unit: 'kcal' },
+                  { label: 'Protein', total: totals.protein, target: needs.protein, unit: 'g' },
+                  { label: 'Karbohidrat', total: totals.carbs, target: needs.carbs, unit: 'g' },
+                  { label: 'Lemak', total: totals.fat, target: needs.fat, unit: 'g' },
+                ] as const
+              ).map((g) => {
+                const pct = g.target > 0 ? Math.round((g.total / g.target) * 100) : 0;
+                return (
+                  <div key={g.label} className="goal-row">
+                    <div className="goal-row-head">
+                      <strong>{g.label}</strong>
+                      <span className="goal-pct">
+                        {g.total.toLocaleString('id-ID')} / {g.target.toLocaleString('id-ID')} {g.unit} • {pct}%
+                      </span>
+                    </div>
+                    <div className="goal-bar">
+                      <div
+                        className={`goal-fill${pct > 100 ? ' over' : ''}`}
+                        style={{ width: `${Math.min(pct, 100)}%` }}
+                      />
                     </div>
                   </div>
-                ))}
-              </div>
+                );
+              })}
             </div>
-          ))}
+          )}
         </div>
-      )}
-      
-      <div style={{ textAlign: 'center', marginTop: '2rem' }}>
-        <button onClick={() => { setLoading(true); if(needs) loadDatasetsAndRunGA(needs); }} className="btn-primary">
+
+        {menu && (
+          <div className="focus-item bordered-panel">
+            <h3>Menu Harian</h3>
+            <table className="day-table">
+              <thead>
+                <tr>
+                  <th>Waktu</th>
+                  <th>Menu</th>
+                  <th>Berat</th>
+                  <th>Kalori</th>
+                  <th>Karbohidrat</th>
+                  <th>Protein</th>
+                  <th>Lemak</th>
+                  <th>Aksi</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(
+                  [
+                    { key: 'breakfast', label: 'Sarapan' },
+                    { key: 'lunch', label: 'Makan Siang' },
+                    { key: 'dinner', label: 'Makan Malam' },
+                  ] as const
+                ).map(({ key, label }) =>
+                  menu[key].map((item, idx) => (
+                    <tr key={`${key}-${idx}`}>
+                      {idx === 0 && (
+                        <td rowSpan={menu[key].length} className="meal-cell">
+                          {label}
+                        </td>
+                      )}
+                      <td>{item.menu}</td>
+                      <td className="num">{STANDARD_PORTION_GRAMS[CATEGORY_ORDER[idx]]} gram</td>
+                      <td className="num">{fmtKcal(item.energy)} kcal</td>
+                      <td className="num">{fmtNum(item.carbo)} gram</td>
+                      <td className="num">{fmtNum(item.protein)} gram</td>
+                      <td className="num">{fmtNum(item.fat)} gram</td>
+                      <td>
+                        <button
+                          type="button"
+                          className="btn-outline btn-mini"
+                          onClick={() => substitute(key, idx)}
+                          title="Ganti dengan makanan lain se-kategori"
+                        >
+                          Ganti
+                        </button>
+                      </td>
+                    </tr>
+                  )),
+                )}
+              </tbody>
+            </table>
+            <p style={{ fontSize: '0.8rem', color: 'var(--text-light)', marginTop: '0.5rem' }}>
+              Berat porsi standar per kategori; nilai gizi per porsi standar.
+            </p>
+          </div>
+        )}
+      </div>
+
+      <div style={{ textAlign: 'center', marginTop: '1.5rem', display: 'flex', gap: '0.75rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+        <button onClick={regenerate} className="btn-primary">
           Generate Ulang Menu
+        </button>
+        <button onClick={() => navigate('/targets')} className="btn-outline">
+          Atur Target Mingguan
         </button>
       </div>
     </div>
