@@ -11,7 +11,6 @@ import {
 } from '../services/GeneticAlgorithm';
 import { FOOD_CATEGORY_LABELS, loadMenuFoods, migrateFoodKeys, type MenuFood, type MenuNutrient } from '../services/FoodDatabase';
 import { scaleHouseholdMeasure } from '../services/householdMeasure';
-import { MENU_ENGINE_VERSION } from '../data/menuConfig';
 import { AKG_BASE_FEMALE, PREGNANCY_INCREMENT } from '../data/mochiConfig';
 import { NutritionCalculator } from '../services/NutritionCalculator';
 import type { Allergen } from '../data/menuFoods';
@@ -243,12 +242,7 @@ const Recommendation: React.FC = () => {
                     return (
                       <li key={item.slotIndex} className="meal-item">
                         <div>
-                          <span className="item-cat">
-                            {FOOD_CATEGORY_LABELS[food.category]}
-                            <span className="item-code" title={`TKPI 2017: ${food.tkpiName}`}>
-                              {' '}· TKPI {food.code}
-                            </span>
-                          </span>
+                          <span className="item-cat">{FOOD_CATEGORY_LABELS[food.category]}</span>
                           <span className="item-name">{food.name}</span>
                           <span className="item-macros">
                             {scaleHouseholdMeasure(food.portionLabel, portions)} · {fmt(food.portionG * portions, 0)} g
@@ -306,27 +300,23 @@ const Recommendation: React.FC = () => {
                     >
                       <div className="goal-fill" style={{ width: `${Math.min(pct, 100)}%` }} />
                     </div>
-                    {missing > 0 && (
-                      <p className="goal-missing">
-                        {missing} makanan tidak punya data {g.label.charAt(0).toLowerCase() + g.label.slice(1)} di TKPI — tidak dihitung sebagai 0.
-                      </p>
-                    )}
                   </div>
                 );
               })}
-              <p className="note" style={{ marginTop: '1rem' }}>
-                Folat belum dihitung: TKPI 2017 tidak memuat folat. Tablet tambah darah tetap diminum sesuai anjuran
-                bidan.
+              {GOALS.some((g) => totals.missing[g.key] > 0) && (
+                <p className="note" style={{ marginTop: '1rem' }}>
+                  Tanda ≥: sebagian makanan belum punya data untuk zat gizi itu, jadi jumlah sebenarnya bisa lebih tinggi.
+                </p>
+              )}
+              <p className="note" style={{ marginTop: '0.5rem' }}>
+                Folat belum bisa dihitung dari menu. Tablet tambah darah tetap diminum sesuai anjuran bidan.
               </p>
             </div>
           )}
 
           {target && (
             <div className="card">
-              <h3>Zat gizi lain</h3>
-              <p className="note" style={{ margin: '0.25rem 0 0.6rem' }}>
-                Ikut dihitung dari TKPI, tetapi tidak dipakai untuk menyusun menu.
-              </p>
+              <h3 style={{ marginBottom: '0.5rem' }}>Zat gizi lain</h3>
               <dl className="other-list">
                 {OTHER_NUTRIENTS.map((n) => (
                   <div key={n.key}>
@@ -347,8 +337,7 @@ const Recommendation: React.FC = () => {
                 </div>
               </dl>
               <p className="note" style={{ marginTop: '0.6rem' }}>
-                Natrium belum termasuk garam yang ditambahkan saat memasak. Tanda ≥ berarti sebagian makanan tidak punya
-                data di TKPI.
+                Natrium belum termasuk garam yang ditambahkan saat memasak.
               </p>
             </div>
           )}
@@ -363,10 +352,6 @@ const Recommendation: React.FC = () => {
             </Link>
           </div>
 
-          <p className="note">
-            Komposisi gizi: TKPI 2017 (Kemenkes RI), per 100 g bagian yang dapat dimakan, dari berkas tkpi_*.csv. Berat
-            porsi masih perkiraan awal dan menunggu penetapan tim gizi. {MENU_ENGINE_VERSION}
-          </p>
         </aside>
       </div>
     </main>

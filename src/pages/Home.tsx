@@ -57,7 +57,7 @@ const Home: React.FC = () => {
         <div>
           <span className="kicker">Untuk ibu hamil, trimester 1 sampai 3</span>
           <h1 className="hero-title">
-            Makan untuk dua, <span className="hl">tanpa menghitung sendiri.</span>
+            Menu sehat selama hamil, <span className="hl">tanpa repot menghitung.</span>
           </h1>
           <p className="lede">
             Isi usia kehamilan, tinggi, dan berat badan Ibu. Mochi menghitung kebutuhan energi dan zat gizi
@@ -105,7 +105,7 @@ const Home: React.FC = () => {
             </ul>
             <p className="note-foot">
               TB {EXAMPLE_PROFILE.heightCm} cm, BB {EXAMPLE_PROFILE.prepregnancyWeightKg} → {EXAMPLE_PROFILE.currentWeightKg} kg,
-              aktivitas sedikit aktif. Dihitung oleh mesin yang sama dengan yang Ibu pakai.
+              aktivitas sedikit aktif. Dihitung dengan cara yang sama seperti hasil Ibu nanti.
             </p>
           </div>
         </div>

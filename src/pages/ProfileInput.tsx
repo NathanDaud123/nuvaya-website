@@ -8,11 +8,11 @@ import { STORAGE_KEYS, clearAllStored, readJSON, saveStored } from '../services/
 import AutocompleteMulti, { type SuggestOption } from '../components/AutocompleteMulti';
 
 /** Kategori aktivitas DRI 2023, dijelaskan dengan bahasa sehari-hari. */
-const ACTIVITY_OPTIONS: Array<{ value: PhysicalActivityCategory; label: string; dri: string; desc: string }> = [
-  { value: 'inactive', label: 'Tidak aktif', dri: 'Inactive', desc: 'Hanya kegiatan harian biasa: urusan rumah ringan, banyak duduk.' },
-  { value: 'low_active', label: 'Sedikit aktif', dri: 'Low active', desc: 'Kegiatan harian + 30–60 menit gerak sedang, mis. jalan cepat.' },
-  { value: 'active', label: 'Aktif', dri: 'Active', desc: 'Kegiatan harian + lebih dari 60 menit gerak sedang tiap hari.' },
-  { value: 'very_active', label: 'Sangat aktif', dri: 'Very active', desc: 'Gerak sedang 60 menit + gerak berat, atau pekerjaan fisik berat.' },
+const ACTIVITY_OPTIONS: Array<{ value: PhysicalActivityCategory; label: string; desc: string }> = [
+  { value: 'inactive', label: 'Tidak aktif', desc: 'Hanya kegiatan harian biasa: urusan rumah ringan, banyak duduk.' },
+  { value: 'low_active', label: 'Sedikit aktif', desc: 'Kegiatan harian + 30–60 menit gerak sedang, mis. jalan cepat.' },
+  { value: 'active', label: 'Aktif', desc: 'Kegiatan harian + lebih dari 60 menit gerak sedang tiap hari.' },
+  { value: 'very_active', label: 'Sangat aktif', desc: 'Gerak sedang 60 menit + gerak berat, atau pekerjaan fisik berat.' },
 ];
 
 const NUMBER_FIELDS: Array<{
@@ -318,7 +318,7 @@ const ProfileInput: React.FC = () => {
                       onChange={handleChange}
                     />
                     <strong>
-                      {o.label} <em>· {o.dri}</em>
+                      {o.label}
                     </strong>
                     <span>{o.desc}</span>
                   </label>

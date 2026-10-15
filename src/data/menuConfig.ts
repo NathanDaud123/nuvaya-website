@@ -4,8 +4,6 @@
  */
 import type { MenuCategory } from './menuFoods';
 
-export const MENU_ENGINE_VERSION = 'MOCHI-MENU-v0.1';
-
 export const MENU_CATEGORY_LABELS: Record<MenuCategory, string> = {
   pokok: 'Makanan pokok',
   hewani: 'Lauk hewani',

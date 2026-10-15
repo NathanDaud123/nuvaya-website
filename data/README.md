@@ -1,6 +1,8 @@
 # Dataset menu Mochi
 
-## Yang dipakai aplikasi: `tkpi_*.csv`
+Folder ini tidak ikut ter-deploy. Yang dimuat aplikasi hanya lima CSV di `public/datasets/`.
+
+## Yang dipakai aplikasi: `public/datasets/tkpi_*.csv`
 
 | Berkas | Isi (`kategori`) |
 |---|---|
@@ -38,5 +40,5 @@ python scripts/build_menu_csv.py    # isi ulang kolom gizi kelima CSV dari tkpi_
 
 ## Lainnya
 
-- `tkpi_2017.json` berisi seluruh 1.146 bahan TKPI 2017, hasil ekstraksi dari PDF. Ini sumber untuk `build_menu_csv.py`.
-- `rec_source_*.csv` adalah dataset menu lama (bukan TKPI). File ini disimpan, tapi tidak dipakai aplikasi.
+- `data/tkpi_2017.json` berisi seluruh 1.146 bahan TKPI 2017, hasil ekstraksi dari PDF. Ini sumber untuk `build_menu_csv.py`.
+- `data/legacy/rec_source_*.csv` adalah dataset menu lama (bukan TKPI). File ini disimpan, tapi tidak dipakai aplikasi.

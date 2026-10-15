@@ -5,6 +5,7 @@ import Needs from './pages/Needs';
 import Recommendation from './pages/Recommendation';
 import Targets from './pages/Targets';
 import Education from './pages/Education';
+import RouteMeta from './components/RouteMeta';
 import './index.css';
 
 const navClass = ({ isActive }: { isActive: boolean }) => `nav-link${isActive ? ' active' : ''}`;
@@ -12,6 +13,7 @@ const navClass = ({ isActive }: { isActive: boolean }) => `nav-link${isActive ? 
 function App() {
   return (
     <Router>
+      <RouteMeta />
       <header className="site-header">
         <div className="container header-inner">
           <Link to="/" className="brand">
@@ -50,8 +52,8 @@ function App() {
                 Mochi
               </Link>
               <p>
-                Prototipe penelitian sistem rekomendasi gizi personal untuk ibu hamil di Indonesia.
-                Bukan pengganti pemeriksaan bidan atau dokter.
+                Kebutuhan gizi dan menu harian untuk ibu hamil di Indonesia. Bukan pengganti pemeriksaan bidan atau
+                dokter.
               </p>
             </div>
             <div className="footer-refs">
@@ -62,14 +64,6 @@ function App() {
                 <li>IOM. Weight Gain During Pregnancy, 2009.</li>
                 <li>Kemenkes RI. Tabel Komposisi Pangan Indonesia 2017.</li>
               </ol>
-            </div>
-          </div>
-          <div className="footer-bottom">
-            <span>Data Ibu hanya tersimpan di perangkat ini.</span>
-            <div className="footer-links">
-              <a href="#">Kebijakan Privasi</a>
-              <a href="#">Syarat dan Ketentuan</a>
-              <a href="#">Kontak Peneliti</a>
             </div>
           </div>
         </div>

@@ -4,7 +4,7 @@ Isi ulang kolom gizi lima CSV menu (public/datasets/tkpi_*.csv) dari TKPI 2017.
 CSV menu = daftar makanan yang boleh dipakai mesin menu MOCHI. Kolom yang diisi tim
 (kode_tkpi, nama_menu, kategori, porsi_urt, berat_porsi_g, alergen, aktif, catatan)
 dibiarkan apa adanya; kolom gizi dan nama_tkpi SELALU ditimpa dari
-public/datasets/tkpi_2017.json (hasil scripts/build_tkpi.py) agar tidak ada angka ketik manual.
+data/tkpi_2017.json (hasil scripts/build_tkpi.py) agar tidak ada angka ketik manual.
 
 Nilai gizi = per 100 g bagian yang dapat dimakan (BDD), persis seperti tabel PDF TKPI.
 Sel kosong = tidak dianalisis / tidak tersedia di TKPI, BUKAN 0.
@@ -20,7 +20,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 DATASETS = ROOT / "public" / "datasets"
-TKPI_JSON = DATASETS / "tkpi_2017.json"
+TKPI_JSON = ROOT / "data" / "tkpi_2017.json"
 
 # berkas → kategori yang boleh ada di dalamnya
 FILES = {

@@ -1,5 +1,5 @@
 """
-Ekstrak seluruh tabel TKPI 2017 (PDF Kemenkes) menjadi public/datasets/tkpi_2017.json.
+Ekstrak seluruh tabel TKPI 2017 (PDF Kemenkes) menjadi data/tkpi_2017.json.
 
 Kenapa dari PDF, bukan dari spreadsheet spesifikasi: sheet "Food Database" di
 MOCHI_Programmer_Specification_v1.1_TKPI.xlsx hanya memuat 787 dari 1.146 baris TKPI
@@ -24,7 +24,7 @@ import fitz  # PyMuPDF
 
 ROOT = Path(__file__).resolve().parent.parent
 PDF = ROOT / "doc" / "TKPI 2017 Tabel komposisi pangan Indonesia 2017 Kemenkes.pdf"
-OUT = ROOT / "public" / "datasets" / "tkpi_2017.json"
+OUT = ROOT / "data" / "tkpi_2017.json"
 
 NUTRIENTS = [
     "water", "energy", "protein", "fat", "carbs", "fiber", "ash",

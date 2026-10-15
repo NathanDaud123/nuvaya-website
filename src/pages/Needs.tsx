@@ -234,9 +234,6 @@ const Needs: React.FC = () => {
         </Link>
       </div>
 
-      <p className="note" style={{ marginTop: '2.5rem' }}>
-        {mochi.algorithmVersion} · {mochi.energyReference} · {mochi.nutrientReference} · {mochi.gwgReference}
-      </p>
     </main>
   );
 };

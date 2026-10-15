@@ -2,7 +2,7 @@ import Papa from 'papaparse';
 import { ATWATER_SANITY, MENU_CATEGORY_LABELS } from '../data/menuConfig';
 import { LEGACY_FOOD_KEY_MAP, type Allergen, type MenuCategory } from '../data/menuFoods';
 
-/** Lima CSV menu dari TKPI 2017 (lihat scripts/build_menu_csv.py). CSV lama rec_source_* tidak dipakai. */
+/** Lima CSV menu dari TKPI 2017 (lihat scripts/build_menu_csv.py & data/README.md). */
 const MENU_CSV_FILES = ['tkpi_staple', 'tkpi_animal', 'tkpi_plant', 'tkpi_vegetable', 'tkpi_side'];
 
 const CATEGORIES: MenuCategory[] = ['pokok', 'hewani', 'nabati', 'sayur', 'buah', 'selingan'];
