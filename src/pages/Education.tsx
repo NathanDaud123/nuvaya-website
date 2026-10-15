@@ -1,28 +1,31 @@
 import React, { useState } from 'react';
-import { Apple, Salad, Pill, Beef, Milk, ChevronDown, CircleCheck } from 'lucide-react';
+import { Apple, Salad, Pill, Beef, Milk, ChevronDown } from 'lucide-react';
 import { EDUCATION_MODULES } from '../data/education';
 
 type IconType = React.ComponentType<{ size?: number | string; strokeWidth?: number | string }>;
 
-const META: Record<string, { icon: IconType; bg: string; color: string }> = {
-  'EDU-IRON': { icon: Beef, bg: '#fef2f2', color: '#dc2626' },
-  'EDU-IFA': { icon: Pill, bg: '#eff6ff', color: '#2563eb' },
-  'EDU-DIVERSITY': { icon: Salad, bg: '#f0fdf4', color: '#059669' },
-  'EDU-PROTEIN': { icon: Apple, bg: '#fffbeb', color: '#d97706' },
-  'EDU-CALCIUM-FOLATE': { icon: Milk, bg: '#faf5ff', color: '#7c3aed' },
+const META: Record<string, { icon: IconType; bg: string }> = {
+  'EDU-IRON': { icon: Beef, bg: 'var(--mochi)' },
+  'EDU-IFA': { icon: Pill, bg: 'var(--mochi-wash)' },
+  'EDU-DIVERSITY': { icon: Salad, bg: 'var(--matcha-wash)' },
+  'EDU-PROTEIN': { icon: Apple, bg: 'var(--kunyit-wash)' },
+  'EDU-CALCIUM-FOLATE': { icon: Milk, bg: 'var(--paper-deep)' },
 };
 
-const FALLBACK_META = { icon: Apple as IconType, bg: '#f0fdf4', color: '#059669' };
+const FALLBACK_META = { icon: Apple as IconType, bg: 'var(--matcha-wash)' };
 
 const Education: React.FC = () => {
   const [openId, setOpenId] = useState<string | null>(EDUCATION_MODULES[0].id);
 
   return (
-    <div className="container" style={{ padding: '4rem 1rem', maxWidth: '800px' }}>
-      <div className="section-header">
-        <span className="eyebrow">Belajar gizi</span>
-        <h2>Edukasi Gizi</h2>
-        <p>{EDUCATION_MODULES.length} modul bacaan singkat sesuai kebutuhan ibu hamil.</p>
+    <main className="container page page-narrow">
+      <div className="page-head">
+        <span className="kicker">Bacaan singkat</span>
+        <h1>Edukasi gizi</h1>
+        <p>
+          {EDUCATION_MODULES.length} catatan pendek tentang zat gizi yang paling sering kurang selama hamil. Masing-masing
+          bisa dibaca kurang dari satu menit.
+        </p>
       </div>
 
       <div className="edu-list">
@@ -38,8 +41,8 @@ const Education: React.FC = () => {
                 onClick={() => setOpenId(open ? null : m.id)}
                 aria-expanded={open}
               >
-                <span className="edu-icon" style={{ background: meta.bg, color: meta.color }}>
-                  <Icon size={26} strokeWidth={1.75} />
+                <span className="edu-icon" style={{ background: meta.bg }}>
+                  <Icon size={22} strokeWidth={1.75} />
                 </span>
                 <span className="edu-titles">
                   <span className="edu-pill">{m.nutrient}</span>
@@ -50,10 +53,7 @@ const Education: React.FC = () => {
               {open && (
                 <ul className="edu-points">
                   {m.body.map((point, i) => (
-                    <li key={i}>
-                      <CircleCheck size={18} />
-                      <span>{point}</span>
-                    </li>
+                    <li key={i}>{point}</li>
                   ))}
                 </ul>
               )}
@@ -61,7 +61,7 @@ const Education: React.FC = () => {
           );
         })}
       </div>
-    </div>
+    </main>
   );
 };
 

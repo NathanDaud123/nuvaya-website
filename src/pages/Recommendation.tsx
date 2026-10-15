@@ -1,269 +1,375 @@
-import React, { useEffect, useState } from 'react';
-import type { FoodLibrary, RecommendedMenu } from '../services/GeneticAlgorithm';
-import { GeneticAlgorithm } from '../services/GeneticAlgorithm';
-import { CATEGORY_ORDER, loadFoodLibrary, STANDARD_PORTION_GRAMS } from '../services/FoodDatabase';
-import type { FoodContext, MochiCalculationResult, NutritionalNeeds } from '../models/types';
-import { StatList, StatRow } from '../components/StatList';
-import { STORAGE_KEYS, loadStored } from '../services/storage';
-import { useNavigate } from 'react-router-dom';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import {
+  GeneticAlgorithm,
+  buildSlots,
+  decode,
+  totalsOf,
+  type Genome,
+  type MenuSlot,
+  type MenuTarget,
+} from '../services/GeneticAlgorithm';
+import { FOOD_CATEGORY_LABELS, loadMenuFoods, migrateFoodKeys, type MenuFood, type MenuNutrient } from '../services/FoodDatabase';
+import { scaleHouseholdMeasure } from '../services/householdMeasure';
+import { MENU_ENGINE_VERSION } from '../data/menuConfig';
+import { AKG_BASE_FEMALE, PREGNANCY_INCREMENT } from '../data/mochiConfig';
+import { NutritionCalculator } from '../services/NutritionCalculator';
+import type { Allergen } from '../data/menuFoods';
+import type { FoodContext, MochiCalculationResult } from '../models/types';
+import { STORAGE_KEYS, readJSON } from '../services/storage';
+
+const ALLERGEN_LABELS: Record<Allergen, string> = {
+  telur: 'telur',
+  susu: 'susu',
+  ikan: 'ikan',
+  udang: 'udang',
+  kacang_tanah: 'kacang tanah',
+  kedelai: 'kedelai',
+  gandum: 'gandum/terigu',
+};
+
+interface Exclusion {
+  keys: Set<string>;
+  /** Kelompok alergen dari makanan yang ditandai alergi — semua makanan se-alergen ikut disingkirkan */
+  allergens: Allergen[];
+  count: number;
+}
 
 /**
- * R34/R35: alergi tidak pernah ditampilkan; makanan yang tidak disukai diganti.
- * Kategori yang habis terkecualikan dipakai utuh (fallback) agar GA tetap jalan.
+ * R34 (alergi) / R35 (tidak suka) / R38 (pantangan): makanan disingkirkan SEBELUM GA.
+ * Alergi diperluas ke kelompok alergennya (alergi "Telur dadar" → semua makanan bertelur).
+ * Tidak ada fallback yang memunculkan kembali makanan alergi.
  */
-function applyFoodContext(library: FoodLibrary, ctx: FoodContext | null): { filtered: FoodLibrary; excludedCount: number } {
-  if (!ctx) return { filtered: library, excludedCount: 0 };
-  const excluded = new Set([...ctx.allergyFoodKeys, ...ctx.dislikedFoodKeys]);
-  if (excluded.size === 0) return { filtered: library, excludedCount: 0 };
-
-  const filtered = {} as FoodLibrary;
-  let excludedCount = 0;
-  (Object.keys(library) as (keyof FoodLibrary)[]).forEach((cat) => {
-    const kept = library[cat].filter((item) => !excluded.has(`${cat}:${item.menu}`));
-    excludedCount += library[cat].length - kept.length;
-    filtered[cat] = kept.length > 0 ? kept : library[cat];
-  });
-  return { filtered, excludedCount };
+function buildExclusion(foods: MenuFood[], ctx: FoodContext | null): Exclusion {
+  if (!ctx) return { keys: new Set(), allergens: [], count: 0 };
+  const allergyKeys = new Set(migrateFoodKeys(ctx.allergyFoodKeys));
+  const allergens = [...new Set(foods.filter((f) => allergyKeys.has(f.key)).flatMap((f) => f.allergens))];
+  const keys = new Set([
+    ...allergyKeys,
+    ...migrateFoodKeys(ctx.dislikedFoodKeys),
+    ...migrateFoodKeys(ctx.tabooFoodKeys ?? []),
+  ]);
+  for (const f of foods) {
+    if (f.allergens.some((a) => allergens.includes(a))) keys.add(f.key);
+  }
+  return { keys, allergens, count: foods.filter((f) => keys.has(f.key)).length };
 }
+
+/**
+ * Target dihitung ulang dari kelompok umur + trimester + EER yang tersimpan, agar hasil yang
+ * disimpan sebelum target baru (mis. tiamin) ditambahkan tetap lengkap.
+ */
+function targetFrom(r: MochiCalculationResult): MenuTarget {
+  const t =
+    r.akgAgeGroup in AKG_BASE_FEMALE && r.trimester in PREGNANCY_INCREMENT
+      ? NutritionCalculator.calculateNutrientTargets(r.akgAgeGroup, r.trimester, r.eerKcalDay)
+      : r.targets;
+  return {
+    energy: r.eerKcalDay,
+    protein: t.protein,
+    carbs: t.carbs,
+    fat: t.fat,
+    fiber: t.fiber,
+    iron: t.iron_mg,
+    calcium: t.calcium_mg,
+    zinc: t.zinc_mg,
+    vitC: t.vitC_mg,
+    thiamin: t.thiamin_mg,
+    riboflavin: t.riboflavin_mg,
+    niacin: t.niacin_mg,
+    phosphorus: t.phosphorus_mg,
+    potassium: t.potassium_mg,
+    sodium: t.sodium_mg,
+  };
+}
+
+const fmt = (n: number, digits = 1) => n.toLocaleString('id-ID', { maximumFractionDigits: digits });
+const fmtKcal = (n: number) => Math.round(n).toLocaleString('id-ID');
+
+const GOALS: Array<{ key: MenuNutrient; label: string; unit: string; digits: number }> = [
+  { key: 'energy', label: 'Energi', unit: 'kkal', digits: 0 },
+  { key: 'protein', label: 'Protein', unit: 'g', digits: 0 },
+  { key: 'carbs', label: 'Karbohidrat', unit: 'g', digits: 0 },
+  { key: 'fat', label: 'Lemak', unit: 'g', digits: 0 },
+  { key: 'fiber', label: 'Serat', unit: 'g', digits: 0 },
+  { key: 'iron', label: 'Zat besi', unit: 'mg', digits: 1 },
+  { key: 'calcium', label: 'Kalsium', unit: 'mg', digits: 0 },
+  { key: 'zinc', label: 'Seng', unit: 'mg', digits: 1 },
+  { key: 'vitC', label: 'Vitamin C', unit: 'mg', digits: 0 },
+  { key: 'thiamin', label: 'Tiamin (B1)', unit: 'mg', digits: 1 },
+];
+
+/** Dihitung dan ditampilkan, tetapi tidak ikut fungsi fitness (lihat FITNESS_WEIGHTS). */
+const OTHER_NUTRIENTS: Array<{ key: MenuNutrient; label: string; unit: string; digits: number }> = [
+  { key: 'riboflavin', label: 'Riboflavin (B2)', unit: 'mg', digits: 1 },
+  { key: 'niacin', label: 'Niasin (B3)', unit: 'mg', digits: 1 },
+  { key: 'phosphorus', label: 'Fosfor', unit: 'mg', digits: 0 },
+  { key: 'potassium', label: 'Kalium', unit: 'mg', digits: 0 },
+];
 
 const Recommendation: React.FC = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
-  const [needs, setNeeds] = useState<NutritionalNeeds | null>(null);
-  const [menu, setMenu] = useState<RecommendedMenu | null>(null);
-  const [totals, setTotals] = useState<NutritionalNeeds | null>(null);
-  const [totalPrice, setTotalPrice] = useState(0);
-  const [excludedCount, setExcludedCount] = useState(0);
+  const [loadError, setLoadError] = useState('');
+  const [target, setTarget] = useState<MenuTarget | null>(null);
+  const [slots, setSlots] = useState<MenuSlot[]>([]);
+  const [genome, setGenome] = useState<Genome | null>(null);
+  const [liked, setLiked] = useState<Set<string>>(new Set());
+  const [exclusion, setExclusion] = useState<Exclusion>({ keys: new Set(), allergens: [], count: 0 });
 
-  const fmtNum = (n: number) =>
-    n.toLocaleString('id-ID', { maximumFractionDigits: 1 });
-  const fmtKcal = (n: number) => Math.round(n).toLocaleString('id-ID');
-
-  const [library, setLibrary] = useState<FoodLibrary | null>(null);
-
-  const applyTotals = (m: RecommendedMenu) => {
-    const allItems = [...m.breakfast, ...m.lunch, ...m.dinner];
-    setTotals({
-      calories: Math.round(allItems.reduce((a, i) => a + i.energy, 0)),
-      protein: Math.round(allItems.reduce((a, i) => a + i.protein, 0)),
-      carbs: Math.round(allItems.reduce((a, i) => a + i.carbo, 0)),
-      fat: Math.round(allItems.reduce((a, i) => a + i.fat, 0)),
-      fiber: 0,
-    });
-    setTotalPrice(allItems.reduce((a, i) => a + i.price, 0));
-  };
-
-  /** Ganti satu item dengan alternatif se-kategori (di luar alergi/hindari). */
-  const substitute = (mealKey: keyof RecommendedMenu, idx: number) => {
-    if (!menu || !library) return;
-    const cat = CATEGORY_ORDER[idx];
-    if (!cat) return;
-    const current = menu[mealKey][idx];
-    const candidates = library[cat].filter((i) => i.menu !== current.menu);
-    if (candidates.length === 0) return;
-    const pick = candidates[Math.floor(Math.random() * candidates.length)];
-    const next: RecommendedMenu = {
-      ...menu,
-      [mealKey]: menu[mealKey].map((it, i) => (i === idx ? pick : it)),
-    };
-    setMenu(next);
-    applyTotals(next);
-  };
+  const plan = useCallback(async (): Promise<boolean> => {
+    const mochi = readJSON<MochiCalculationResult>(STORAGE_KEYS.result);
+    if (!mochi?.targets || typeof mochi.eerKcalDay !== 'number') return false;
+    const ctx = readJSON<FoodContext>(STORAGE_KEYS.food);
+    const foods = await loadMenuFoods();
+    const excl = buildExclusion(foods, ctx);
+    const likedKeys = new Set(migrateFoodKeys(ctx?.likedFoodKeys ?? []));
+    const t = targetFrom(mochi);
+    const s = buildSlots(foods, excl.keys);
+    setTarget(t);
+    setExclusion(excl);
+    setLiked(likedKeys);
+    setSlots(s);
+    setGenome(GeneticAlgorithm.run(s, t, likedKeys));
+    return true;
+  }, []);
 
   useEffect(() => {
-    const savedMochi = loadStored(STORAGE_KEYS.result);
-    const savedNeeds = loadStored(STORAGE_KEYS.needs);
-    if (!savedMochi && !savedNeeds) {
-      navigate('/profile');
-      return;
-    }
-    // Preferensi kini menyatu di Profil Ibu; fallback ke profil bila belum ada
-    const savedFood = loadStored(STORAGE_KEYS.food);
-    if (!savedFood) {
-      navigate('/profile');
-      return;
-    }
-    const foodCtx = JSON.parse(savedFood) as FoodContext;
+    plan()
+      .then((ok) => {
+        if (!ok) navigate('/profile');
+      })
+      .catch((err) => {
+        console.error('Gagal menyusun menu', err);
+        setLoadError('Data komposisi pangan gagal dimuat. Periksa koneksi, lalu coba lagi.');
+      })
+      .finally(() => setLoading(false));
+  }, [plan, navigate]);
 
-    const run = async () => {
-      try {
-        const library = await loadFoodLibrary();
-        const { filtered, excludedCount: n } = applyFoodContext(library, foodCtx);
-        setLibrary(filtered);
-        setExcludedCount(n);
-
-        let target: NutritionalNeeds;
-        if (savedMochi) {
-          const parsed = JSON.parse(savedMochi) as MochiCalculationResult;
-          target = parsed.gaTarget;
-        } else {
-          target = JSON.parse(savedNeeds as string) as NutritionalNeeds;
-        }
-        setNeeds(target);
-
-        const recommended = GeneticAlgorithm.run(filtered, target);
-        if (recommended) {
-          setMenu(recommended);
-          applyTotals(recommended);
-        }
-      } catch (error) {
-        console.error('Error loading datasets', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    run();
-  }, [navigate]);
-
-  const regenerate = async () => {
-    if (!needs) return;
+  const regenerate = () => {
     setLoading(true);
-    try {
-      const library = await loadFoodLibrary();
-      const savedFood = loadStored(STORAGE_KEYS.food);
-      const { filtered } = applyFoodContext(library, savedFood ? (JSON.parse(savedFood) as FoodContext) : null);
-      setLibrary(filtered);
-      const recommended = GeneticAlgorithm.run(filtered, needs);
-      if (recommended) {
-        setMenu(recommended);
-        applyTotals(recommended);
-      }
-    } catch (error) {
-      console.error('Error regenerating menu', error);
-    } finally {
-      setLoading(false);
-    }
+    setLoadError('');
+    // beri kesempatan loader tampil sebelum GA (~0,2 detik) berjalan
+    window.setTimeout(() => {
+      plan()
+        .catch(() => setLoadError('Data komposisi pangan gagal dimuat. Periksa koneksi, lalu coba lagi.'))
+        .finally(() => setLoading(false));
+    }, 30);
   };
 
+  const substitute = (slotIndex: number) => {
+    if (!genome || !target) return;
+    setGenome(GeneticAlgorithm.substitute(slots, genome, slotIndex, target, liked));
+  };
+
+  const meals = useMemo(() => (genome ? decode(slots, genome) : []), [slots, genome]);
+  const totals = useMemo(() => totalsOf(meals.flatMap((m) => m.items)), [meals]);
+  const emptySlots = slots.filter((s) => s.pool.length === 0);
+
   if (loading) {
-    return <div className="container" style={{ padding: '5rem 1rem', textAlign: 'center' }}><h2>Memproses Rekomendasi GA...</h2><div className="loader"></div></div>;
+    return (
+      <main className="container loading">
+        <p>Menyusun menu yang paling mendekati target Ibu…</p>
+        <div className="loader" />
+      </main>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <main className="container page page-narrow">
+        <div className="card">
+          <p role="alert">{loadError}</p>
+          <button className="btn btn-primary" style={{ marginTop: '1rem' }} onClick={regenerate}>
+            Coba lagi
+          </button>
+        </div>
+      </main>
+    );
   }
 
   return (
-    <div className="container reco-page">
-      <div className="section-header">
-        <h2>Rekomendasi Menu Anda</h2>
-        <p>Menu ini disusun untuk mendekati target gizi harian Anda.</p>
-        {excludedCount > 0 && (
-          <p style={{ fontSize: '0.9rem', color: 'var(--text-light)' }}>
-            {excludedCount} makanan dikecualikan sesuai alergi / makanan yang Anda hindari.
+    <main className="container page">
+      <div className="result-head">
+        <div>
+          <span className="kicker">Langkah 3 dari 4</span>
+          <h1>Menu hari ini</h1>
+          <p className="muted" style={{ marginTop: '0.5rem' }}>
+            Tiga kali makan dan dua kali selingan, disusun agar total sehari mendekati kebutuhan energi, protein, zat
+            besi, kalsium, seng, dan vitamin C Ibu.
           </p>
-        )}
+        </div>
+        <button onClick={regenerate} className="btn btn-ghost">
+          Susun ulang
+        </button>
       </div>
 
-      <div className="reco-grid">
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          {totals && (
-            <div className="focus-item highlight-panel">
-              <h3>Total Menu Rekomendasi</h3>
-              <StatList labelWidth="8rem">
-                <StatRow label="Kalori">{totals.calories} kcal</StatRow>
-                <StatRow label="Protein">{totals.protein} g</StatRow>
-                <StatRow label="Karbohidrat">{totals.carbs} g</StatRow>
-                <StatRow label="Lemak">{totals.fat} g</StatRow>
-                <StatRow label="Estimasi Harga">Rp {totalPrice.toLocaleString('id-ID')}</StatRow>
-              </StatList>
-            </div>
-          )}
+      {exclusion.count > 0 && (
+        <p className="menu-notice">
+          {exclusion.count} makanan tidak dipakai karena alergi, tidak disukai, atau pantangan.
+          {exclusion.allergens.length > 0 &&
+            ` Karena alergi, semua makanan yang mengandung ${exclusion.allergens.map((a) => ALLERGEN_LABELS[a]).join(', ')} ikut disingkirkan.`}
+        </p>
+      )}
+      {emptySlots.length > 0 && (
+        <p className="menu-notice warn">
+          Tidak ada pilihan tersisa untuk{' '}
+          {emptySlots.map((s) => `${s.categories.map((c) => FOOD_CATEGORY_LABELS[c].toLowerCase()).join('/')} (${s.mealLabel.toLowerCase()})`).join(', ')}
+          , jadi bagian itu dikosongkan.
+        </p>
+      )}
 
-          {needs && totals && (
-            <div className="focus-item bordered-panel">
-              <h3>Capaian Target Harian</h3>
-              {(
-                [
-                  { label: 'Kalori', total: totals.calories, target: needs.calories, unit: 'kcal' },
-                  { label: 'Protein', total: totals.protein, target: needs.protein, unit: 'g' },
-                  { label: 'Karbohidrat', total: totals.carbs, target: needs.carbs, unit: 'g' },
-                  { label: 'Lemak', total: totals.fat, target: needs.fat, unit: 'g' },
-                ] as const
-              ).map((g) => {
-                const pct = g.target > 0 ? Math.round((g.total / g.target) * 100) : 0;
-                return (
-                  <div key={g.label} className="goal-row">
-                    <div className="goal-row-head">
-                      <strong>{g.label}</strong>
-                      <span className="goal-pct">
-                        {g.total.toLocaleString('id-ID')} / {g.target.toLocaleString('id-ID')} {g.unit} • {pct}%
-                      </span>
-                    </div>
-                    <div className="goal-bar">
-                      <div
-                        className={`goal-fill${pct > 100 ? ' over' : ''}`}
-                        style={{ width: `${Math.min(pct, 100)}%` }}
-                      />
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-
-        {menu && (
-          <div className="focus-item bordered-panel">
-            <h3>Menu Harian</h3>
-            <table className="day-table">
-              <thead>
-                <tr>
-                  <th>Waktu</th>
-                  <th>Menu</th>
-                  <th>Berat</th>
-                  <th>Kalori</th>
-                  <th>Karbohidrat</th>
-                  <th>Protein</th>
-                  <th>Lemak</th>
-                  <th>Aksi</th>
-                </tr>
-              </thead>
-              <tbody>
-                {(
-                  [
-                    { key: 'breakfast', label: 'Sarapan' },
-                    { key: 'lunch', label: 'Makan Siang' },
-                    { key: 'dinner', label: 'Makan Malam' },
-                  ] as const
-                ).map(({ key, label }) =>
-                  menu[key].map((item, idx) => (
-                    <tr key={`${key}-${idx}`}>
-                      {idx === 0 && (
-                        <td rowSpan={menu[key].length} className="meal-cell">
-                          {label}
-                        </td>
-                      )}
-                      <td>{item.menu}</td>
-                      <td className="num">{STANDARD_PORTION_GRAMS[CATEGORY_ORDER[idx]]} gram</td>
-                      <td className="num">{fmtKcal(item.energy)} kcal</td>
-                      <td className="num">{fmtNum(item.carbo)} gram</td>
-                      <td className="num">{fmtNum(item.protein)} gram</td>
-                      <td className="num">{fmtNum(item.fat)} gram</td>
-                      <td>
+      <div className="menu-layout">
+        <div className="meals">
+          {meals.map((meal) => {
+            if (meal.items.length === 0) return null;
+            const kcal = meal.items.reduce((a, i) => a + (i.food.perPortion.energy ?? 0) * i.portions, 0);
+            const isSnack = meal.key.startsWith('selingan');
+            return (
+              <section key={meal.key} className={`meal-card${isSnack ? ' snack' : ''}`} aria-label={meal.label}>
+                <div className="meal-head">
+                  <h2>{meal.label}</h2>
+                  <span>{fmtKcal(kcal)} kkal</span>
+                </div>
+                <ul className="meal-items">
+                  {meal.items.map((item) => {
+                    const { food, portions } = item;
+                    const p = (n: MenuNutrient) => {
+                      const v = food.perPortion[n];
+                      return v == null ? null : v * portions;
+                    };
+                    const iron = p('iron');
+                    const calcium = p('calcium');
+                    return (
+                      <li key={item.slotIndex} className="meal-item">
+                        <div>
+                          <span className="item-cat">
+                            {FOOD_CATEGORY_LABELS[food.category]}
+                            <span className="item-code" title={`TKPI 2017: ${food.tkpiName}`}>
+                              {' '}· TKPI {food.code}
+                            </span>
+                          </span>
+                          <span className="item-name">{food.name}</span>
+                          <span className="item-macros">
+                            {scaleHouseholdMeasure(food.portionLabel, portions)} · {fmt(food.portionG * portions, 0)} g
+                            {' · '}protein {fmt(p('protein') ?? 0)} g
+                            {iron != null && ` · besi ${fmt(iron)} mg`}
+                            {calcium != null && ` · kalsium ${fmt(calcium, 0)} mg`}
+                          </span>
+                        </div>
+                        <div className="item-kcal">
+                          {fmtKcal(p('energy') ?? 0)} kkal
+                        </div>
                         <button
                           type="button"
-                          className="btn-outline btn-mini"
-                          onClick={() => substitute(key, idx)}
-                          title="Ganti dengan makanan lain se-kategori"
+                          className="btn btn-ghost btn-small"
+                          onClick={() => substitute(item.slotIndex)}
+                          aria-label={`Ganti ${food.name}`}
                         >
                           Ganti
                         </button>
-                      </td>
-                    </tr>
-                  )),
-                )}
-              </tbody>
-            </table>
-            <p style={{ fontSize: '0.8rem', color: 'var(--text-light)', marginTop: '0.5rem' }}>
-              Berat porsi standar per kategori; nilai gizi per porsi standar.
-            </p>
-          </div>
-        )}
-      </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </section>
+            );
+          })}
+        </div>
 
-      <div style={{ textAlign: 'center', marginTop: '1.5rem' }}>
-        <button onClick={regenerate} className="btn-primary">
-          Generate Ulang Menu
-        </button>
+        <aside className="side-panel">
+          {target && (
+            <div className="card">
+              <h3 style={{ marginBottom: '0.9rem' }}>Dibanding target harian</h3>
+              {GOALS.map((g) => {
+                const total = totals.value[g.key];
+                const tgt = target[g.key];
+                if (!Number.isFinite(tgt)) return null; // hasil tersimpan versi lama tanpa target ini
+                const pct = tgt > 0 ? Math.round((total / tgt) * 100) : 0;
+                const missing = totals.missing[g.key];
+                return (
+                  <div key={g.key} className="goal-row">
+                    <div className="goal-row-head">
+                      <strong>{g.label}</strong>
+                      <span className="goal-pct">
+                        {missing > 0 && '≥ '}
+                        {fmt(total, g.digits)} / {fmt(tgt, g.digits)} {g.unit}
+                      </span>
+                    </div>
+                    <div
+                      className="goal-bar"
+                      role="progressbar"
+                      aria-label={g.label}
+                      aria-valuenow={pct}
+                      aria-valuemin={0}
+                      aria-valuemax={100}
+                    >
+                      <div className="goal-fill" style={{ width: `${Math.min(pct, 100)}%` }} />
+                    </div>
+                    {missing > 0 && (
+                      <p className="goal-missing">
+                        {missing} makanan tidak punya data {g.label.charAt(0).toLowerCase() + g.label.slice(1)} di TKPI — tidak dihitung sebagai 0.
+                      </p>
+                    )}
+                  </div>
+                );
+              })}
+              <p className="note" style={{ marginTop: '1rem' }}>
+                Folat belum dihitung: TKPI 2017 tidak memuat folat. Tablet tambah darah tetap diminum sesuai anjuran
+                bidan.
+              </p>
+            </div>
+          )}
+
+          {target && (
+            <div className="card">
+              <h3>Zat gizi lain</h3>
+              <p className="note" style={{ margin: '0.25rem 0 0.6rem' }}>
+                Ikut dihitung dari TKPI, tetapi tidak dipakai untuk menyusun menu.
+              </p>
+              <dl className="other-list">
+                {OTHER_NUTRIENTS.map((n) => (
+                  <div key={n.key}>
+                    <dt>{n.label}</dt>
+                    <dd>
+                      {totals.missing[n.key] > 0 && '≥ '}
+                      {fmt(totals.value[n.key], n.digits)}
+                      {Number.isFinite(target[n.key]) && ` / ${fmt(target[n.key], n.digits)}`} {n.unit}
+                    </dd>
+                  </div>
+                ))}
+                <div>
+                  <dt>Natrium</dt>
+                  <dd>
+                    {totals.missing.sodium > 0 && '≥ '}
+                    {fmt(totals.value.sodium, 0)} mg
+                  </dd>
+                </div>
+              </dl>
+              <p className="note" style={{ marginTop: '0.6rem' }}>
+                Natrium belum termasuk garam yang ditambahkan saat memasak. Tanda ≥ berarti sebagian makanan tidak punya
+                data di TKPI.
+              </p>
+            </div>
+          )}
+
+          <div className="card">
+            <h3>Lanjut: target minggu ini</h3>
+            <p className="muted" style={{ fontSize: '0.92rem', margin: '0.3rem 0 0.9rem' }}>
+              Pilih satu-dua kebiasaan kecil yang mau Ibu coba.
+            </p>
+            <Link to="/targets" className="link-arrow">
+              Pasang target
+            </Link>
+          </div>
+
+          <p className="note">
+            Komposisi gizi: TKPI 2017 (Kemenkes RI), per 100 g bagian yang dapat dimakan, dari berkas tkpi_*.csv. Berat
+            porsi masih perkiraan awal dan menunggu penetapan tim gizi. {MENU_ENGINE_VERSION}
+          </p>
+        </aside>
       </div>
-    </div>
+    </main>
   );
 };
 

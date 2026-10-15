@@ -25,3 +25,6 @@ dist-ssr
 
 # Report folder
 report/
+
+# Python
+__pycache__/

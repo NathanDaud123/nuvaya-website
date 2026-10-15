@@ -1,0 +1,22 @@
+﻿no,kode_tkpi,nama_menu,kategori,porsi_urt,berat_porsi_g,alergen,aktif,catatan,nama_tkpi,sumber_tkpi,air_g_per100g,energi_kkal_per100g,protein_g_per100g,lemak_g_per100g,karbohidrat_g_per100g,serat_g_per100g,abu_g_per100g,kalsium_mg_per100g,fosfor_mg_per100g,besi_mg_per100g,natrium_mg_per100g,kalium_mg_per100g,tembaga_mg_per100g,seng_mg_per100g,retinol_mcg_per100g,beta_karoten_mcg_per100g,karoten_total_mcg_per100g,thiamin_mg_per100g,riboflavin_mg_per100g,niasin_mg_per100g,vitamin_c_mg_per100g,bdd_persen
+1,ER074,Pisang ambon,buah,½ buah sedang,50,,1,,"Pisang ambon, segar",KZGMI-2001,72.9,108,1,0.8,24.3,1.9,1,20,30,0.2,10,0,0.2,0.2,,37,,0.05,0.11,0.1,9,75
+2,ER039,Jeruk manis,buah,2 buah sedang,110,,1,,"Jeruk manis, segar",DABM-1964,87.2,45,0.9,0.2,11.2,1.4,0.5,33,23,0.4,4,472.1,160,0.2,,0,190,0.08,0.03,0.2,49,72
+3,ER058,Mangga harum manis,buah,¾ buah kecil,90,,1,,"Mangga harumanis, segar",DABM-1964,86.6,46,0.4,0.2,11.9,1.7,0.8,15,9,0.2,2,88.9,0,0.1,,120,1200,0.08,0.01,0.3,6,65
+4,ER031,Jambu biji,buah,1 buah sedang,100,,1,,Jambu biji,DABM-1964,86,49,0.9,0.3,12.2,2.4,0.6,14,28,1.1,10,52.8,0,0.3,,27,25,0.02,0.03,0.8,87,82
+5,ER105,Semangka,buah,2 potong sedang,180,,1,,"Semangka, segar",DABM-1964,92.1,28,0.5,0.2,6.9,0.4,0.3,7,12,0.2,7,93.8,0,0.1,,315,590,0.05,0.05,0.3,6,46
+6,ER004,Apel,buah,½ buah sedang,85,,1,,"Apel, segar",DABM-1964,84.1,58,0.3,0.4,14.9,2.6,0.3,6,10,0.3,2,130,124.2,0.3,,30,90,0.04,0.03,0.1,5,88
+7,ER067,Melon,buah,1 potong besar,190,,1,,"Melon, segar",BKP,90.8,37,0.6,0.4,7.8,1,0.5,12,14,0.4,27,167,0.3,0.1,,1,0,0.02,0.1,0,0,58.1
+8,ER100,Salak pondoh,buah,2 buah sedang,65,,1,,"Salak pondoh, segar",KZGPI- 1990,77.9,87,0.8,0.4,20.1,0,0.8,38,31,3.9,,,0.1,0.2,0,,40,0,0.12,0.1,8,59
+9,ER097,Rambutan,buah,8 buah,75,,1,,"Rambutan, segar",DABM-1964,80.5,69,0.9,0.1,18.1,0.8,0.4,16,16,0.5,16,104.2,0.2,0.1,,0,0,0,0.07,0.5,58,40
+10,ER022,Duku,buah,10 buah,80,,1,,"Duku, segar",DABM-1964,82,63,1,0.2,16.1,4.3,0.7,18,9,0.9,2,149,0.1,0.2,,0,0,0.05,0.15,1.5,9,64
+11,ER070,Nanas,buah,¼ buah sedang,85,,1,,"Nanas, segar",KZGPI- 1990,88.9,40,0.6,0.3,9.9,0.6,0.3,22,14,0.9,18,111,0,0.1,0,17,90,0.02,0.04,0.2,22,53
+12,ER006,Belimbing,buah,1 buah besar,140,,1,,"Belimbing, segar",DABM-1964,90,36,0.4,0.4,8.8,3.2,0.4,4,12,1.1,4,130,,0.1,,29,170,0.03,,,35,86
+13,ER001,Alpukat,buah,½ buah besar,50,,1,,"Alpukat, segar",DABM-1964,84.3,85,0.9,6.5,7.7,,0.6,10,20,0.9,2,278,0.2,0.4,,189,180,0.05,0.08,1,13,61
+14,JR006,Susu sapi,selingan,1 gelas,200,susu,1,,"Susu sapi, segar",DABM-1964,88.3,61,3.2,3.5,4.3,0,0.7,143,60,1.7,36,149,0.02,0.3,39,12,,0.03,0.18,0.2,1,100
+15,JP011,Yoghurt,selingan,1 cup,150,susu,1,,"Yoghurt, segar",DABM-1964,88,52,3.3,2.5,4,0,2.2,120,90,0.1,40,299,0.01,0.6,22,10,,0.04,0.1,0.2,0,100
+16,CP060,Susu kedelai,selingan,1 gelas,200,kedelai,1,,Susu kedelai,DABM-1964,87,41,3.5,2.5,5,0.2,2,50,45,0.7,128,287.9,0.12,1,,,200,0.08,0.05,0.7,2,100
+17,BP029,Getuk singkong,selingan,1 potong,50,,1,,Getuk singkong,KZGPI- 1990,49.8,204,0.5,1.4,47.4,0.8,1.1,97,52,1.5,,,,,0,,208,0.08,,0.1,0,100
+18,AP058,Klepon,selingan,4 butir,40,,1,,"Kelepon, kue",KZGMI-2001,49.6,215,3.7,3.7,41.8,1,1.2,232,45,3.3,,,,,0,,872,0.09,0.07,0.2,0,100
+19,AP029,Biskuit,selingan,4 keping,40,gandum;susu;telur,1,,Biskuit,DABM-1964,2.2,458,6.9,14.4,75.1,2.1,1.4,62,87,2.7,241,20.3,0.16,0.6,0,14,,0.09,0.15,1.4,0,100
+20,AP031,Bakwan,selingan,1 buah,40,gandum;udang,1,,Bakwan,KZGPI- 1990,40.5,280,8.2,10.2,39,3.4,2.1,204,79,7,,,,,0,,0,0.08,,,0,100
+21,ER073,Pepaya,buah,1 potong besar,100,,0,"Tidak dipakai: TKPI mencetak lemak 12,0 g/100 g padahal energi 46 kkal; perlu konfirmasi","Pepaya, segar",DABM-1964,86.7,46,0.5,12,12.2,1.6,0.6,23,12,1.7,4,221,0,0.3,,1038,365,0.04,0.06,0.4,78,75

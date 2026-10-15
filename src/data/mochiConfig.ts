@@ -46,6 +46,13 @@ export const GWG_TARGETS: Record<
   obesity: { totalMinKg: 5, totalMaxKg: 9, rateT2T3MinKgPerWeek: 0.17, rateT2T3MaxKgPerWeek: 0.27 },
 };
 
+/**
+ * Asumsi IOM 2009 untuk kenaikan BB selama trimester 1 (semua kategori IMT).
+ * Dipakai untuk trajectory: rentang minggu ke-G = T1 + laju T2-T3 x (G - akhir T1).
+ * TODO (NUTRITION REVIEW): konfirmasi dengan tim gizi.
+ */
+export const GWG_FIRST_TRIMESTER_KG = { min: 0.5, max: 2 } as const;
+
 export type PhysicalActivityCategory = 'inactive' | 'low_active' | 'active' | 'very_active';
 
 /**
@@ -87,7 +94,7 @@ export const ENERGY_DEPOSITION_ED: Record<BmiCategoryId, number> = {
 };
 
 /** Kelompok usia AKG untuk ibu */
-export type AkgAgeGroup = '13-15' | '16-18' | '19-29' | '30-49';
+export type AkgAgeGroup = '10-12' | '13-15' | '16-18' | '19-29' | '30-49' | '50-64';
 
 export interface AkgBase {
   energyKcal: number;
@@ -106,33 +113,67 @@ export interface AkgBase {
   iron_mg: number;
   iodine_mcg: number;
   zinc_mg: number;
+  thiamin_mg: number;
+  riboflavin_mg: number;
+  niacin_mg: number;
+  phosphorus_mg: number;
+  potassium_mg: number;
+  sodium_mg: number;
+  copper_mcg: number;
 }
 
-/** AKG dasar perempuan non-hamil (Permenkes 28/2019, Tabel 1-3) */
+/**
+ * AKG dasar perempuan non-hamil (Permenkes 28/2019, Tabel 1-3).
+ * Tembaga dalam mcg seperti di AKG (TKPI memakai mg).
+ */
 export const AKG_BASE_FEMALE: Record<AkgAgeGroup, AkgBase> = {
+  '10-12': {
+    energyKcal: 1900, proteinG: 55, fatG: 65, omega3G: 1.0, omega6G: 10,
+    carbsG: 280, fiberG: 27, waterMl: 1850,
+    vitA_RE: 600, vitC_mg: 50, folate_mcg: 400, vitB12_mcg: 3.5,
+    calcium_mg: 1200, iron_mg: 8, iodine_mcg: 120, zinc_mg: 8,
+    thiamin_mg: 1.0, riboflavin_mg: 1.0, niacin_mg: 12,
+    phosphorus_mg: 1250, potassium_mg: 4400, sodium_mg: 1400, copper_mcg: 700,
+  },
   '13-15': {
     energyKcal: 2050, proteinG: 65, fatG: 70, omega3G: 1.1, omega6G: 11,
     carbsG: 300, fiberG: 29, waterMl: 2100,
     vitA_RE: 600, vitC_mg: 65, folate_mcg: 400, vitB12_mcg: 4.0,
     calcium_mg: 1200, iron_mg: 15, iodine_mcg: 150, zinc_mg: 9,
+    thiamin_mg: 1.1, riboflavin_mg: 1.0, niacin_mg: 14,
+    phosphorus_mg: 1250, potassium_mg: 4800, sodium_mg: 1500, copper_mcg: 795,
   },
   '16-18': {
     energyKcal: 2100, proteinG: 65, fatG: 70, omega3G: 1.1, omega6G: 11,
     carbsG: 300, fiberG: 29, waterMl: 2150,
     vitA_RE: 600, vitC_mg: 75, folate_mcg: 400, vitB12_mcg: 4.0,
     calcium_mg: 1200, iron_mg: 15, iodine_mcg: 150, zinc_mg: 9,
+    thiamin_mg: 1.1, riboflavin_mg: 1.0, niacin_mg: 14,
+    phosphorus_mg: 1250, potassium_mg: 5000, sodium_mg: 1600, copper_mcg: 890,
   },
   '19-29': {
     energyKcal: 2250, proteinG: 60, fatG: 65, omega3G: 1.1, omega6G: 12,
     carbsG: 360, fiberG: 32, waterMl: 2350,
     vitA_RE: 600, vitC_mg: 75, folate_mcg: 400, vitB12_mcg: 4.0,
     calcium_mg: 1000, iron_mg: 18, iodine_mcg: 150, zinc_mg: 8,
+    thiamin_mg: 1.1, riboflavin_mg: 1.1, niacin_mg: 14,
+    phosphorus_mg: 700, potassium_mg: 4700, sodium_mg: 1500, copper_mcg: 900,
   },
   '30-49': {
     energyKcal: 2150, proteinG: 60, fatG: 60, omega3G: 1.1, omega6G: 12,
     carbsG: 340, fiberG: 30, waterMl: 2350,
     vitA_RE: 600, vitC_mg: 75, folate_mcg: 400, vitB12_mcg: 4.0,
     calcium_mg: 1000, iron_mg: 18, iodine_mcg: 150, zinc_mg: 8,
+    thiamin_mg: 1.1, riboflavin_mg: 1.1, niacin_mg: 14,
+    phosphorus_mg: 700, potassium_mg: 4700, sodium_mg: 1500, copper_mcg: 900,
+  },
+  '50-64': {
+    energyKcal: 1800, proteinG: 60, fatG: 50, omega3G: 1.1, omega6G: 11,
+    carbsG: 280, fiberG: 25, waterMl: 2350,
+    vitA_RE: 600, vitC_mg: 75, folate_mcg: 400, vitB12_mcg: 4.0,
+    calcium_mg: 1200, iron_mg: 8, iodine_mcg: 150, zinc_mg: 8,
+    thiamin_mg: 1.1, riboflavin_mg: 1.1, niacin_mg: 14,
+    phosphorus_mg: 700, potassium_mg: 4700, sodium_mg: 1400, copper_mcg: 900,
   },
 };
 
@@ -145,17 +186,23 @@ export const PREGNANCY_INCREMENT: Record<Trimester, Partial<AkgBase>> = {
     carbsG: 25, fiberG: 3, waterMl: 300,
     vitA_RE: 300, vitC_mg: 10, folate_mcg: 200, vitB12_mcg: 0.5,
     calcium_mg: 200, iron_mg: 0, iodine_mcg: 70, zinc_mg: 2,
+    thiamin_mg: 0.3, riboflavin_mg: 0.3, niacin_mg: 4,
+    phosphorus_mg: 0, potassium_mg: 0, sodium_mg: 0, copper_mcg: 100,
   },
   2: {
     energyKcal: 300, proteinG: 10, fatG: 2.3, omega3G: 0.3, omega6G: 2,
     carbsG: 40, fiberG: 4, waterMl: 300,
     vitA_RE: 300, vitC_mg: 10, folate_mcg: 200, vitB12_mcg: 0.5,
     calcium_mg: 200, iron_mg: 9, iodine_mcg: 70, zinc_mg: 4,
+    thiamin_mg: 0.3, riboflavin_mg: 0.3, niacin_mg: 4,
+    phosphorus_mg: 0, potassium_mg: 0, sodium_mg: 0, copper_mcg: 100,
   },
   3: {
     energyKcal: 300, proteinG: 30, fatG: 2.3, omega3G: 0.3, omega6G: 2,
     carbsG: 40, fiberG: 4, waterMl: 300,
     vitA_RE: 300, vitC_mg: 10, folate_mcg: 200, vitB12_mcg: 0.5,
     calcium_mg: 200, iron_mg: 9, iodine_mcg: 70, zinc_mg: 4,
+    thiamin_mg: 0.3, riboflavin_mg: 0.3, niacin_mg: 4,
+    phosphorus_mg: 0, potassium_mg: 0, sodium_mg: 0, copper_mcg: 100,
   },
 };

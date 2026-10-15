@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Link, NavLink } from 'react-router-dom';
 import Home from './pages/Home';
 import ProfileInput from './pages/ProfileInput';
 import Needs from './pages/Needs';
@@ -7,20 +7,26 @@ import Targets from './pages/Targets';
 import Education from './pages/Education';
 import './index.css';
 
+const navClass = ({ isActive }: { isActive: boolean }) => `nav-link${isActive ? ' active' : ''}`;
+
 function App() {
   return (
     <Router>
       <header className="site-header">
         <div className="container header-inner">
-          <Link to="/" className="brand" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <img src="/logo.svg" alt="Mochi Logo" style={{ width: '32px', height: '32px' }} />
+          <Link to="/" className="brand">
+            <img src="/logo.svg" alt="" />
             Mochi
           </Link>
-          <nav className="main-nav">
-            <Link to="/">Beranda</Link>
-            <Link to="/edukasi">Edukasi</Link>
-            <Link to="/profile" className="btn-primary">
-              Kalkulasi Gizi
+          <nav className="main-nav" aria-label="Utama">
+            <NavLink to="/edukasi" className={navClass}>
+              Edukasi
+            </NavLink>
+            <NavLink to="/targets" className={(s) => `${navClass(s)} hide-sm`}>
+              Target saya
+            </NavLink>
+            <Link to="/profile" className="btn btn-primary btn-small nav-cta">
+              Hitung gizi
             </Link>
           </nav>
         </div>
@@ -36,15 +42,35 @@ function App() {
       </Routes>
 
       <footer className="site-footer">
-        <div className="container footer-inner">
-          <div className="footer-brand">
-            <h3>Mochi</h3>
-            <p>Sistem Rekomendasi Diet Personal Berbasis Web untuk Nutrisi Optimal Ibu Hamil.</p>
+        <div className="container">
+          <div className="footer-grid">
+            <div className="footer-brand">
+              <Link to="/" className="brand">
+                <img src="/logo.svg" alt="" />
+                Mochi
+              </Link>
+              <p>
+                Prototipe penelitian sistem rekomendasi gizi personal untuk ibu hamil di Indonesia.
+                Bukan pengganti pemeriksaan bidan atau dokter.
+              </p>
+            </div>
+            <div className="footer-refs">
+              <h3>Dasar perhitungan</h3>
+              <ol>
+                <li>NASEM. Dietary Reference Intakes for Energy, 2023.</li>
+                <li>Permenkes RI No. 28/2019 tentang Angka Kecukupan Gizi.</li>
+                <li>IOM. Weight Gain During Pregnancy, 2009.</li>
+                <li>Kemenkes RI. Tabel Komposisi Pangan Indonesia 2017.</li>
+              </ol>
+            </div>
           </div>
-          <div className="footer-links">
-            <a href="#">Kebijakan Privasi</a>
-            <a href="#">Syarat dan Ketentuan</a>
-            <a href="#">Kontak Peneliti</a>
+          <div className="footer-bottom">
+            <span>Data Ibu hanya tersimpan di perangkat ini.</span>
+            <div className="footer-links">
+              <a href="#">Kebijakan Privasi</a>
+              <a href="#">Syarat dan Ketentuan</a>
+              <a href="#">Kontak Peneliti</a>
+            </div>
           </div>
         </div>
       </footer>

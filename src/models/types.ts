@@ -53,6 +53,13 @@ export interface NutrientTargets extends NutritionalNeeds {
   iron_mg: number;
   iodine_mcg: number;
   zinc_mg: number;
+  thiamin_mg: number;
+  riboflavin_mg: number;
+  niacin_mg: number;
+  phosphorus_mg: number;
+  potassium_mg: number;
+  sodium_mg: number;
+  copper_mcg: number;
 }
 
 /** Hasil kalkulasi lengkap untuk dashboard + logging backend */
@@ -69,21 +76,14 @@ export interface MochiCalculationResult {
   gwgActualKg: number;
   gwgTargetMinKg: number;
   gwgTargetMaxKg: number;
+  /** Rentang IOM sampai minggu ini; null di trimester 1 / hasil lama sebelum field ini ada */
+  gwgExpectedMinKg?: number | null;
+  gwgExpectedMaxKg?: number | null;
   eerKcalDay: number;
   energyDepositionEd: number;
   targets: NutrientTargets;
   /** Target ringkas untuk Genetic Algorithm (kalori/protein/karbo/lemak/serat) */
   gaTarget: NutritionalNeeds;
-}
-
-export interface FoodItem {
-  no: number;
-  menu: string;
-  energy: number;
-  carbo: number;
-  protein: number;
-  fat: number;
-  price: number;
 }
 
 /** Kendala terstandar (Layar 2 — Makanan Saya) */

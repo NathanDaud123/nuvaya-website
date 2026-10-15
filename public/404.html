@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Mengalihkan… | Mochi</title>
+    <script>
+      try {
+        sessionStorage.setItem(
+          'mochi_spa_redirect',
+          location.pathname + location.search + location.hash
+        );
+      } catch (e) {
+        /* abaikan — tetap redirect */
+      }
+      location.replace('/');
+    </script>
+  </head>
+  <body>
+    <p>Mengalihkan…</p>
+  </body>
+</html>

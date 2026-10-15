@@ -4,6 +4,7 @@ import {
   EER_TRIMESTER1,
   EER_TRIMESTER23,
   ENERGY_DEPOSITION_ED,
+  GWG_FIRST_TRIMESTER_KG,
   GWG_TARGETS,
   MOCHI_VERSIONS,
   PREGNANCY_INCREMENT,
@@ -47,15 +48,35 @@ export class NutritionCalculator {
   }
 
   static getAkgAgeGroup(ageYears: number): AkgAgeGroup {
-    if (ageYears >= 13 && ageYears <= 15) return '13-15';
-    if (ageYears >= 16 && ageYears <= 18) return '16-18';
-    if (ageYears >= 30 && ageYears <= 49) return '30-49';
-    return '19-29';
+    if (ageYears <= 12) return '10-12';
+    if (ageYears <= 15) return '13-15';
+    if (ageYears <= 18) return '16-18';
+    if (ageYears <= 29) return '19-29';
+    if (ageYears <= 49) return '30-49';
+    return '50-64';
   }
 
   /** GWG aktual = BB saat ini - BB pra-hamil (IOM 2009: monitor trajectory, bukan diagnosis otomatis) */
   static calculateGwgActual(profile: MaternalProfile): number {
     return profile.currentWeightKg - profile.prepregnancyWeightKg;
+  }
+
+  /**
+   * Rentang kenaikan BB yang diperkirakan IOM 2009 SAMPAI minggu ini (bukan total kehamilan).
+   * null selama trimester 1 — IOM hanya memberi 0,5–2 kg untuk seluruh T1.
+   */
+  static calculateGwgExpectedRange(
+    gestationalAgeWeeks: number,
+    bmiCategory: BmiCategoryId,
+  ): { minKg: number; maxKg: number } | null {
+    const t1End = TRIMESTER_BOUNDARIES.t1MaxWeeks;
+    if (gestationalAgeWeeks <= t1End) return null;
+    const g = GWG_TARGETS[bmiCategory];
+    const weeksAfterT1 = gestationalAgeWeeks - t1End;
+    return {
+      minKg: round1(GWG_FIRST_TRIMESTER_KG.min + g.rateT2T3MinKgPerWeek * weeksAfterT1),
+      maxKg: round1(GWG_FIRST_TRIMESTER_KG.max + g.rateT2T3MaxKgPerWeek * weeksAfterT1),
+    };
   }
 
   /**
@@ -109,17 +130,27 @@ export class NutritionCalculator {
       iron_mg: add(base.iron_mg, inc.iron_mg),
       iodine_mcg: add(base.iodine_mcg, inc.iodine_mcg),
       zinc_mg: add(base.zinc_mg, inc.zinc_mg),
+      thiamin_mg: add(base.thiamin_mg, inc.thiamin_mg),
+      riboflavin_mg: add(base.riboflavin_mg, inc.riboflavin_mg),
+      niacin_mg: add(base.niacin_mg, inc.niacin_mg),
+      phosphorus_mg: add(base.phosphorus_mg, inc.phosphorus_mg),
+      potassium_mg: add(base.potassium_mg, inc.potassium_mg),
+      sodium_mg: add(base.sodium_mg, inc.sodium_mg),
+      copper_mcg: add(base.copper_mcg, inc.copper_mcg),
     };
   }
 
   /** Entry point utama MOCHI v1.0 */
   static calculateMochi(profile: MaternalProfile): MochiCalculationResult {
-    const bmi = this.calculatePrepregnancyBmi(profile);
+    // Kategori dari IMT yang sudah dibulatkan 1 desimal, sama dengan yang ditampilkan
+    // (24,96 tampil "25,0" → harus Overweight, bukan Normal).
+    const bmi = round1(this.calculatePrepregnancyBmi(profile));
     const bmiCategory = this.getBmiCategory(bmi);
     const trimester = this.getTrimester(profile.gestationalAgeWeeks);
     const ageGroup = this.getAkgAgeGroup(profile.maternalAgeYears);
     const gwgActual = this.calculateGwgActual(profile);
     const gwgTarget = GWG_TARGETS[bmiCategory];
+    const gwgExpected = this.calculateGwgExpectedRange(profile.gestationalAgeWeeks, bmiCategory);
     const eer = this.calculateEer(profile, bmiCategory, trimester);
     const targets = this.calculateNutrientTargets(ageGroup, trimester, eer);
 
@@ -131,11 +162,13 @@ export class NutritionCalculator {
       foodCompositionReference: MOCHI_VERSIONS.foodCompositionReference,
       akgAgeGroup: ageGroup,
       trimester,
-      prepregnancyBmi: round1(bmi),
+      prepregnancyBmi: bmi,
       bmiCategory,
       gwgActualKg: round1(gwgActual),
       gwgTargetMinKg: gwgTarget.totalMinKg,
       gwgTargetMaxKg: gwgTarget.totalMaxKg,
+      gwgExpectedMinKg: gwgExpected?.minKg ?? null,
+      gwgExpectedMaxKg: gwgExpected?.maxKg ?? null,
       eerKcalDay: Math.round(eer),
       energyDepositionEd: ENERGY_DEPOSITION_ED[bmiCategory],
       targets,
