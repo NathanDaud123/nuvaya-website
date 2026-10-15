@@ -1,5 +1,5 @@
 """
-Ekstrak seluruh tabel TKPI 2017 (PDF Kemenkes) menjadi data/tkpi_2017.json.
+Ekstrak seluruh tabel TKPI 2017 (PDF Kemenkes) menjadi data/tkpi_2017.csv.
 
 Kenapa dari PDF, bukan dari spreadsheet spesifikasi: sheet "Food Database" di
 MOCHI_Programmer_Specification_v1.1_TKPI.xlsx hanya memuat 787 dari 1.146 baris TKPI
@@ -7,7 +7,8 @@ MOCHI_Programmer_Specification_v1.1_TKPI.xlsx hanya memuat 787 dari 1.146 baris 
 
 Cara kerja: tiap angka dipetakan ke kolom berdasarkan posisi x baris satuan "(g) (Kal) ...",
 sehingga sel kosong tetap kosong (null) dan tidak menggeser angka di sebelahnya.
-Sesuai spesifikasi: nilai kosong TKPI TIDAK diubah menjadi 0.
+Sesuai spesifikasi: nilai kosong TKPI TIDAK diubah menjadi 0 (sel CSV dibiarkan kosong).
+Nilai gizi per 100 g bagian yang dapat dimakan (BDD), seperti tabel PDF.
 
 Pemakaian:
     python scripts/build_tkpi.py [--xlsx doc/MOCHI_...xlsx]
@@ -15,7 +16,7 @@ Dengan --xlsx, hasil ekstraksi juga dibandingkan dengan baris spreadsheet (valid
 """
 
 import argparse
-import json
+import csv
 import re
 import sys
 from pathlib import Path
@@ -24,7 +25,7 @@ import fitz  # PyMuPDF
 
 ROOT = Path(__file__).resolve().parent.parent
 PDF = ROOT / "doc" / "TKPI 2017 Tabel komposisi pangan Indonesia 2017 Kemenkes.pdf"
-OUT = ROOT / "data" / "tkpi_2017.json"
+OUT = ROOT / "data" / "tkpi_2017.csv"
 
 NUTRIENTS = [
     "water", "energy", "protein", "fat", "carbs", "fiber", "ash",
@@ -36,6 +37,37 @@ CODE_RE = re.compile(r"^[A-Z]{2}\d{3}$")
 NUM_RE = re.compile(r"^-?\d+(?:[.,]\d*)?$")
 BLANK_MARKS = {"-", "–"}
 MAX_ROW_HEIGHT = 30  # baris terakhir di halaman: jangan sampai menelan nomor halaman/footer
+
+# field internal → nama kolom CSV (sama dengan kolom gizi di public/datasets/tkpi_*.csv)
+CSV_COLUMNS = [
+    ("code", "kode_tkpi"),
+    ("name", "nama_tkpi"),
+    ("source", "sumber_tkpi"),
+    ("group", "kelompok_pangan"),
+    ("type", "jenis"),
+    ("water", "air_g_per100g"),
+    ("energy", "energi_kkal_per100g"),
+    ("protein", "protein_g_per100g"),
+    ("fat", "lemak_g_per100g"),
+    ("carbs", "karbohidrat_g_per100g"),
+    ("fiber", "serat_g_per100g"),
+    ("ash", "abu_g_per100g"),
+    ("calcium", "kalsium_mg_per100g"),
+    ("phosphorus", "fosfor_mg_per100g"),
+    ("iron", "besi_mg_per100g"),
+    ("sodium", "natrium_mg_per100g"),
+    ("potassium", "kalium_mg_per100g"),
+    ("copper", "tembaga_mg_per100g"),
+    ("zinc", "seng_mg_per100g"),
+    ("retinol", "retinol_mcg_per100g"),
+    ("betaCarotene", "beta_karoten_mcg_per100g"),
+    ("totalCarotene", "karoten_total_mcg_per100g"),
+    ("thiamin", "thiamin_mg_per100g"),
+    ("riboflavin", "riboflavin_mg_per100g"),
+    ("niacin", "niasin_mg_per100g"),
+    ("vitC", "vitamin_c_mg_per100g"),
+    ("bdd", "bdd_persen"),
+]
 
 
 def page_layout(words):
@@ -223,16 +255,19 @@ def main():
         for d in diffs[:40]:
             print("  ", d)
 
-    keys = ["code", "name", "source", "group", "type"] + NUTRIENTS + ["bdd"]
-    payload = {
-        "source": "Tabel Komposisi Pangan Indonesia 2017, Kementerian Kesehatan RI",
-        "basis": "per 100 g bagian dapat dimakan (BDD); null = tidak dianalisis/tidak tersedia, bukan 0",
-        "fields": keys,
-        "rows": [[r[k] for k in keys] for r in rows],
-    }
+    def cell(v):
+        if v is None:
+            return ""  # kosong di TKPI, bukan 0
+        return f"{v:g}" if isinstance(v, float) else v
+
     OUT.parent.mkdir(parents=True, exist_ok=True)
-    OUT.write_text(json.dumps(payload, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
-    print(f"Ditulis: {OUT.relative_to(ROOT)} ({OUT.stat().st_size // 1024} KB)")
+    # utf-8-sig agar Excel membaca huruf dengan benar
+    with OUT.open("w", encoding="utf-8-sig", newline="") as f:
+        w = csv.writer(f, lineterminator="\n")
+        w.writerow([col for _, col in CSV_COLUMNS])
+        for r in rows:
+            w.writerow([cell(r[key]) for key, _ in CSV_COLUMNS])
+    print(f"Ditulis: {OUT.relative_to(ROOT)} ({len(rows)} baris, {OUT.stat().st_size // 1024} KB)")
 
 
 if __name__ == "__main__":

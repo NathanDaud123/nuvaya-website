@@ -34,11 +34,11 @@ Kolom-kolom ini jangan diketik manual. Isinya `nama_tkpi`, `sumber_tkpi`, dan se
 Setelah menambah atau mengubah baris, jalankan:
 
 ```
-python scripts/build_tkpi.py        # sekali saja: PDF TKPI → tkpi_2017.json
-python scripts/build_menu_csv.py    # isi ulang kolom gizi kelima CSV dari tkpi_2017.json
+python scripts/build_tkpi.py        # sekali saja: PDF TKPI → data/tkpi_2017.csv
+python scripts/build_menu_csv.py    # isi ulang kolom gizi kelima CSV dari data/tkpi_2017.csv
 ```
 
 ## Lainnya
 
-- `data/tkpi_2017.json` berisi seluruh 1.146 bahan TKPI 2017, hasil ekstraksi dari PDF. Ini sumber untuk `build_menu_csv.py`.
+- `data/tkpi_2017.csv` berisi seluruh 1.146 bahan TKPI 2017 hasil ekstraksi dari PDF, dengan nama kolom yang sama seperti CSV menu, ditambah `kelompok_pangan` dan `jenis`. Ini sumber untuk `build_menu_csv.py`.
 - `data/legacy/rec_source_*.csv` adalah dataset menu lama (bukan TKPI). File ini disimpan, tapi tidak dipakai aplikasi.

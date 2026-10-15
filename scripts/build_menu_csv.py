@@ -4,7 +4,7 @@ Isi ulang kolom gizi lima CSV menu (public/datasets/tkpi_*.csv) dari TKPI 2017.
 CSV menu = daftar makanan yang boleh dipakai mesin menu MOCHI. Kolom yang diisi tim
 (kode_tkpi, nama_menu, kategori, porsi_urt, berat_porsi_g, alergen, aktif, catatan)
 dibiarkan apa adanya; kolom gizi dan nama_tkpi SELALU ditimpa dari
-data/tkpi_2017.json (hasil scripts/build_tkpi.py) agar tidak ada angka ketik manual.
+data/tkpi_2017.csv (hasil scripts/build_tkpi.py) agar tidak ada angka ketik manual.
 
 Nilai gizi = per 100 g bagian yang dapat dimakan (BDD), persis seperti tabel PDF TKPI.
 Sel kosong = tidak dianalisis / tidak tersedia di TKPI, BUKAN 0.
@@ -14,13 +14,12 @@ Pemakaian (setelah menambah/mengubah baris di salah satu CSV):
 """
 
 import csv
-import json
 import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 DATASETS = ROOT / "public" / "datasets"
-TKPI_JSON = ROOT / "data" / "tkpi_2017.json"
+TKPI_CSV = ROOT / "data" / "tkpi_2017.csv"
 
 # berkas → kategori yang boleh ada di dalamnya
 FILES = {
@@ -38,45 +37,27 @@ META_COLUMNS = [
     "alergen", "aktif", "catatan",
 ]
 
-# kolom CSV → field tkpi_2017.json, urut seperti tabel PDF
+# kolom gizi, urut seperti tabel PDF — namanya sama persis dengan kolom di data/tkpi_2017.csv
 NUTRIENT_COLUMNS = [
-    ("air_g_per100g", "water"),
-    ("energi_kkal_per100g", "energy"),
-    ("protein_g_per100g", "protein"),
-    ("lemak_g_per100g", "fat"),
-    ("karbohidrat_g_per100g", "carbs"),
-    ("serat_g_per100g", "fiber"),
-    ("abu_g_per100g", "ash"),
-    ("kalsium_mg_per100g", "calcium"),
-    ("fosfor_mg_per100g", "phosphorus"),
-    ("besi_mg_per100g", "iron"),
-    ("natrium_mg_per100g", "sodium"),
-    ("kalium_mg_per100g", "potassium"),
-    ("tembaga_mg_per100g", "copper"),
-    ("seng_mg_per100g", "zinc"),
-    ("retinol_mcg_per100g", "retinol"),
-    ("beta_karoten_mcg_per100g", "betaCarotene"),
-    ("karoten_total_mcg_per100g", "totalCarotene"),
-    ("thiamin_mg_per100g", "thiamin"),
-    ("riboflavin_mg_per100g", "riboflavin"),
-    ("niasin_mg_per100g", "niacin"),
-    ("vitamin_c_mg_per100g", "vitC"),
-    ("bdd_persen", "bdd"),
+    "air_g_per100g", "energi_kkal_per100g", "protein_g_per100g", "lemak_g_per100g",
+    "karbohidrat_g_per100g", "serat_g_per100g", "abu_g_per100g", "kalsium_mg_per100g",
+    "fosfor_mg_per100g", "besi_mg_per100g", "natrium_mg_per100g", "kalium_mg_per100g",
+    "tembaga_mg_per100g", "seng_mg_per100g", "retinol_mcg_per100g", "beta_karoten_mcg_per100g",
+    "karoten_total_mcg_per100g", "thiamin_mg_per100g", "riboflavin_mg_per100g",
+    "niasin_mg_per100g", "vitamin_c_mg_per100g", "bdd_persen",
 ]
 
-COLUMNS = META_COLUMNS + ["nama_tkpi", "sumber_tkpi"] + [c for c, _ in NUTRIENT_COLUMNS]
+COLUMNS = META_COLUMNS + ["nama_tkpi", "sumber_tkpi"] + NUTRIENT_COLUMNS
 
 
-def fmt(v):
-    if v is None:
-        return ""
-    return f"{v:g}"
+def num(s):
+    """Sel kosong = tidak ada data di TKPI → None, bukan 0."""
+    return float(s) if s and s.strip() else None
 
 
 def load_tkpi():
-    payload = json.loads(TKPI_JSON.read_text(encoding="utf-8"))
-    fields = payload["fields"]
-    return {row[0]: dict(zip(fields, row)) for row in payload["rows"]}
+    with TKPI_CSV.open(encoding="utf-8-sig", newline="") as f:
+        return {row["kode_tkpi"]: row for row in csv.DictReader(f)}
 
 
 def main():
@@ -111,22 +92,23 @@ def main():
                 warnings.append(f"{where}: kode {code} juga dipakai di {seen_codes[code]}")
             seen_codes[code] = where
 
-            e, p, c, l = (t[k] for k in ("energy", "protein", "carbs", "fat"))
+            e, p, c, l = (num(t[k]) for k in ("energi_kkal_per100g", "protein_g_per100g", "karbohidrat_g_per100g", "lemak_g_per100g"))
             if None not in (e, p, c, l) and e:
                 ratio = (4 * p + 4 * c + 9 * l) / e
                 if not 0.7 <= ratio <= 1.5 and row.get("aktif", "1").strip() != "0":
                     warnings.append(f"{where}: energi TKPI tidak konsisten dengan makro (rasio {ratio:.2f})")
 
-            if t["copper"] is not None and t["copper"] > 10:
-                warnings.append(f"{where}: tembaga {t['copper']:g} mg/100 g di TKPI, kemungkinan tercetak dalam mcg")
+            copper = num(t["tembaga_mg_per100g"])
+            if copper is not None and copper > 10:
+                warnings.append(f"{where}: tembaga {copper:g} mg/100 g di TKPI, kemungkinan tercetak dalam mcg")
 
             new = {k: (row.get(k) or "").strip() for k in META_COLUMNS}
             new["no"] = str(len(out) + 1)
             new["aktif"] = new["aktif"] or "1"
-            new["nama_tkpi"] = t["name"]
-            new["sumber_tkpi"] = t["source"]
-            for col, key in NUTRIENT_COLUMNS:
-                new[col] = fmt(t[key])
+            new["nama_tkpi"] = t["nama_tkpi"]
+            new["sumber_tkpi"] = t["sumber_tkpi"]
+            for col in NUTRIENT_COLUMNS:
+                new[col] = t[col]
             out.append(new)
 
         # utf-8-sig agar Excel menampilkan ½ ¾ dengan benar
