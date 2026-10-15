@@ -71,7 +71,6 @@ const Home: React.FC = () => {
               Lihat cara kerjanya
             </a>
           </div>
-          <p className="hero-fine">Sekitar 2 menit. Tanpa daftar akun — data tersimpan di HP Ibu sendiri.</p>
         </div>
 
         <div className="note-stack" aria-label="Contoh hasil perhitungan">
