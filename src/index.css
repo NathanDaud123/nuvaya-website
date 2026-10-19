@@ -1,25 +1,25 @@
 /*
   Mochi — tampilan
-  Kertas krem, tinta cokelat tua, hijau matcha, merah muda Buku KIA.
+  Putih kemerahan, tinta cokelat-plum, rose, merah muda Buku KIA.
   Display: Fraunces (SOFT, serif yang membulat — seperti mochi). Teks: Plus Jakarta Sans.
 */
 
 :root {
-  --paper: #fbf7f0;
-  --paper-deep: #f3ecdf;
-  --card: #fffefb;
-  --ink: #2a2520;
-  --ink-soft: #5e554b;
-  --ink-faint: #776d62;
-  --line: #e7ddcd;
-  --line-strong: #d3c4ad;
+  --paper: #fdf6f5;
+  --paper-deep: #f8e6e4;
+  --card: #fffdfc;
+  --ink: #2e2226;
+  --ink-soft: #64525a;
+  --ink-faint: #725d67;
+  --line: #f0dcda;
+  --line-strong: #e2c3c0;
 
-  --matcha: #4d6b36;
-  --matcha-deep: #3b5428;
-  --matcha-wash: #e9efdf;
-  --mochi: #f4d6d1;
-  --mochi-wash: #fbece9;
-  --mochi-deep: #a9473f;
+  --rose: #b4466b;
+  --rose-deep: #94345a;
+  --rose-wash: #fbe4ea;
+  --mochi: #f6d3dc;
+  --mochi-wash: #fcedf1;
+  --mochi-deep: #a23b62;
   --kunyit: #f2c94c;
   --kunyit-wash: #fbf1d3;
 
@@ -32,7 +32,7 @@
 
   --radius: 14px;
   --radius-sm: 9px;
-  --shadow-paper: 0 1px 0 rgba(42, 37, 32, 0.04), 0 10px 30px -18px rgba(42, 37, 32, 0.35);
+  --shadow-paper: 0 1px 0 rgba(46, 34, 38, 0.04), 0 10px 30px -18px rgba(46, 34, 38, 0.35);
   --container: 1120px;
 }
 
@@ -95,7 +95,7 @@ button {
 }
 
 :focus-visible {
-  outline: 2px solid var(--matcha);
+  outline: 2px solid var(--rose);
   outline-offset: 2px;
 }
 
@@ -137,9 +137,9 @@ button {
   max-width: 38rem;
 }
 
-/* Stabilo kunyit di belakang kata — dipakai hemat */
+/* Stabilo merah muda di belakang kata — dipakai hemat */
 .hl {
-  background: linear-gradient(transparent 58%, rgba(242, 201, 76, 0.55) 58%, rgba(242, 201, 76, 0.55) 92%, transparent 92%);
+  background: linear-gradient(transparent 58%, rgba(236, 150, 178, 0.45) 58%, rgba(236, 150, 178, 0.45) 92%, transparent 92%);
   padding: 0 0.08em;
 }
 
@@ -171,13 +171,13 @@ button {
 }
 
 .btn-primary {
-  background: var(--matcha);
+  background: var(--rose);
   color: #fff;
   box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.18);
 }
 
 .btn-primary:hover {
-  background: var(--matcha-deep);
+  background: var(--rose-deep);
 }
 
 .btn-ghost {
@@ -202,7 +202,7 @@ button {
 
 .link-arrow {
   font-weight: 600;
-  color: var(--matcha-deep);
+  color: var(--rose-deep);
   text-decoration: underline;
   text-decoration-thickness: 1.5px;
   text-underline-offset: 3px;
@@ -227,7 +227,7 @@ button {
   position: sticky;
   top: 0;
   z-index: 50;
-  background: rgba(251, 247, 240, 0.92);
+  background: rgba(253, 246, 245, 0.92);
   backdrop-filter: blur(8px);
   border-bottom: 1px solid var(--line);
 }
@@ -401,14 +401,14 @@ button {
   padding: 1.5rem 1.5rem 1.25rem 2.25rem;
   box-shadow: var(--shadow-paper);
   transform: rotate(-1.2deg);
-  background-image: linear-gradient(to right, transparent 1.45rem, rgba(169, 71, 63, 0.35) 1.45rem, rgba(169, 71, 63, 0.35) calc(1.45rem + 1px), transparent calc(1.45rem + 1px));
+  background-image: linear-gradient(to right, transparent 1.45rem, rgba(180, 70, 107, 0.35) 1.45rem, rgba(180, 70, 107, 0.35) calc(1.45rem + 1px), transparent calc(1.45rem + 1px));
 }
 
 .note-card.back {
   position: absolute;
   inset: 0;
   background: var(--mochi);
-  border-color: #e9c3bd;
+  border-color: #efc9d2;
   transform: rotate(3deg) translate(10px, 6px);
   box-shadow: none;
 }
@@ -667,7 +667,7 @@ button {
   font-family: var(--font-display);
   font-size: 1.4rem;
   line-height: 1;
-  color: var(--matcha);
+  color: var(--rose);
 }
 
 .faq details[open] summary::after {
@@ -687,7 +687,7 @@ button {
   flex-wrap: wrap;
   gap: 1.5rem;
   background: var(--mochi-wash);
-  border: 1px solid #efd3ce;
+  border: 1px solid #f1d2da;
   border-radius: var(--radius);
   padding: 2rem 2.25rem;
 }
@@ -788,8 +788,8 @@ button {
 .field input:focus,
 .input-unit input:focus {
   outline: none;
-  border-color: var(--matcha);
-  box-shadow: 0 0 0 3px var(--matcha-wash);
+  border-color: var(--rose);
+  box-shadow: 0 0 0 3px var(--rose-wash);
 }
 
 /* Satuan di dalam kotak isian: "158 | cm" */
@@ -837,7 +837,7 @@ button {
   position: absolute;
   left: 0.95rem;
   top: 1.05rem;
-  accent-color: var(--matcha);
+  accent-color: var(--rose);
   width: 1rem;
   height: 1rem;
 }
@@ -856,8 +856,8 @@ button {
 }
 
 .activity-option.checked {
-  border-color: var(--matcha);
-  background: var(--matcha-wash);
+  border-color: var(--rose);
+  background: var(--rose-wash);
 }
 
 .chip-row {
@@ -1006,7 +1006,7 @@ button {
   padding: 0.35rem 0.85rem;
   border-radius: 999px;
   background: var(--mochi);
-  color: #6d2a24;
+  color: #7a2848;
   font-weight: 600;
   font-size: 0.88rem;
   margin-bottom: 0.9rem;
@@ -1019,7 +1019,7 @@ button {
   align-items: center;
   background: var(--card);
   border: 1px solid var(--line);
-  border-left: 6px solid var(--matcha);
+  border-left: 6px solid var(--rose);
   border-radius: var(--radius);
   padding: 1.75rem 2rem;
   margin-bottom: 1.25rem;
@@ -1139,8 +1139,8 @@ button {
   position: absolute;
   top: -1px;
   bottom: -1px;
-  background: var(--matcha-wash);
-  border: 1.5px solid var(--matcha);
+  background: var(--rose-wash);
+  border: 1.5px solid var(--rose);
   border-radius: 999px;
 }
 
@@ -1335,7 +1335,7 @@ button {
 .goal-fill {
   height: 100%;
   border-radius: 999px;
-  background: var(--matcha);
+  background: var(--rose);
 }
 
 .price-line {
@@ -1390,7 +1390,7 @@ button {
 .check input {
   width: 1.1rem;
   height: 1.1rem;
-  accent-color: var(--matcha);
+  accent-color: var(--rose);
 }
 
 .segmented {
@@ -1422,7 +1422,7 @@ button {
 .saved-line {
   margin-top: 1rem;
   text-align: center;
-  color: var(--matcha-deep);
+  color: var(--rose-deep);
   font-weight: 600;
 }
 
@@ -1521,7 +1521,7 @@ button {
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: var(--matcha);
+  background: var(--rose);
 }
 
 /* ---------- Loader ---------- */
@@ -1538,7 +1538,7 @@ button {
   margin: 1.5rem auto 0;
   border-radius: 50%;
   border: 3px solid var(--line);
-  border-top-color: var(--matcha);
+  border-top-color: var(--rose);
   animation: spin 0.9s linear infinite;
 }
 
@@ -1746,7 +1746,7 @@ button {
 }
 
 .meal-card.snack .meal-head {
-  background: var(--mochi-wash);
+  background: var(--rose-wash);
 }
 
 .meal-card.snack .meal-head h2 {

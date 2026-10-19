@@ -7,12 +7,12 @@ type IconType = React.ComponentType<{ size?: number | string; strokeWidth?: numb
 const META: Record<string, { icon: IconType; bg: string }> = {
   'EDU-IRON': { icon: Beef, bg: 'var(--mochi)' },
   'EDU-IFA': { icon: Pill, bg: 'var(--mochi-wash)' },
-  'EDU-DIVERSITY': { icon: Salad, bg: 'var(--matcha-wash)' },
+  'EDU-DIVERSITY': { icon: Salad, bg: 'var(--rose-wash)' },
   'EDU-PROTEIN': { icon: Apple, bg: 'var(--kunyit-wash)' },
   'EDU-CALCIUM-FOLATE': { icon: Milk, bg: 'var(--paper-deep)' },
 };
 
-const FALLBACK_META = { icon: Apple as IconType, bg: 'var(--matcha-wash)' };
+const FALLBACK_META = { icon: Apple as IconType, bg: 'var(--rose-wash)' };
 
 const Education: React.FC = () => {
   const [openId, setOpenId] = useState<string | null>(EDUCATION_MODULES[0].id);
